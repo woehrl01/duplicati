@@ -32,22 +32,30 @@ jobs:
       env: CATEGORY=Border
     - env: CATEGORY=Filter
 
-    - env: CATEGORY=BulkNormal
+    - env:
+        - CATEGORY=BulkNormal
+        - ZIPFILE=data.zip
       cache:
         directories:
-          - $HOME/download/bulk
+          - $HOME/download/BulkNormal
+          - ZIPFILE=data.zip
+    - env:
+        - CATEGORY=BulkNoSize
 
-    - env: CATEGORY=BulkNoSize
       cache:
         directories:
-          - $HOME/download/bulk
+          - $HOME/download/BulkNoSize
 
-    - env: CATEGORY=SVNData
+    - env:
+        - CATEGORY=SVNData
+        - ZIPFILE=DSMCBE.zip
       cache:
         directories:
-          - $HOME/download/svn
+          - $HOME/download/SVNData
 
-    - env: CATEGORY=SVNDataLong
+    - env:
+        - CATEGORY=SVNDataLong
+        - ZIPFILE=DSMCBE.zip
       cache:
         directories:
           - $HOME/download/svn

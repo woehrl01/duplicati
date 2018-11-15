@@ -26,52 +26,35 @@ echo "Build script starting with parameters TRAVIS_BUILD_DIR=$TRAVIS_BUILD_DIR a
 
 # build duplicati
 
-list_dir "${TRAVIS_BUILD_DIR}"/packages/
 echo "travis_fold:start:build_duplicati"
+echo "building binaries"
 msbuild /p:Configuration=Release "${TRAVIS_BUILD_DIR}"/Duplicati.sln
 cp -r "${TRAVIS_BUILD_DIR}"/Duplicati/Server/webroot "${TRAVIS_BUILD_DIR}"/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/webroot
 echo "travis_fold:end:build_duplicati"
 
-# download and extract testdata
-echo "travis_fold:start:download_extract_testdata"
-list_dir "${TRAVIS_BUILD_DIR}"
-
+# prepare dirs
 if [ ! -d ~/tmp ]; then mkdir ~/tmp; fi
-if [ ! -d ~/download ]; then mkdir ~/download; fi
-if [ ! -d ~/download/svn ]; then mkdir ~/download/svn; fi
-if [ ! -d ~/download/bulk ]; then mkdir ~/download/bulk; fi
+if [ ! -d ~/download/"${CATEGORY}" ]; then mkdir ~/download/"${CATEGORY}"; fi
+rm -rf ~/duplicati_testdata/"${CATEGORY}" && mkdir -p ~/duplicati_testdata/"${CATEGORY}"
 
-if [ "$CATEGORY" == "SVNData" ] || [ "$CATEGORY" == "SVNDataLong" ]; then
-    # test if zip file exists and contains no errors
-    unzip -t ~/download/svn/DSMCBE.zip &> /dev/null || \
-    wget --progress=dot:giga "https://s3.amazonaws.com/duplicati-test-file-hosting/DSMCBE.zip" -O ~/download/svn/DSMCBE.zip
-    list_dir ~/download/svn
-fi
+if [[ -z $ZIPFILE ]]; then
+    # download and extract testdata
+    echo "travis_fold:start:download_extract_testdata"
 
-if [ "$CATEGORY" == "BulkNormal" ] || [ "$CATEGORY" == "BulkNoSize" ];  then
-    # test if zip file exists and contains no errors
-    unzip -t ~/download/bulk/data.zip &> /dev/null || \
-    wget --progress=dot:giga "https://s3.amazonaws.com/duplicati-test-file-hosting/data.zip" -O ~/download/bulk/data.zip
-    list_dir ~/download/bulk
-fi
+    # test if zip file exists and contains no errors, otherwise redownload
+    unzip -t ~/download/"${CATEGORY}"/"${ZIPFILE}" &> /dev/null || \
+    wget --progress=dot:giga "https://s3.amazonaws.com/duplicati-test-file-hosting/${ZIPFILE}" -O ~/download/"${CATEGORY}"/"${ZIPFILE}"
 
-rm -rf ~/duplicati_testdata && mkdir ~/duplicati_testdata
+    list_dir ~/download/"${CATEGORY}"
 
-if [ "$CATEGORY" == "SVNData" ] || [ "$CATEGORY" == "SVNDataLong" ]; then
-    mkdir ~/duplicati_testdata/DSMCBE
-    unzip -q ~/download/svn/DSMCBE.zip -d ~/duplicati_testdata/
-    list_dir ~/duplicati_testdata/DSMCBE
-fi
+    unzip -q ~/download/"${CATEGORY}"/"${ZIPFILE}" -d ~/duplicati_testdata/"${CATEGORY}"/
+    list_dir ~/duplicati_testdata/"${CATEGORY}"/$(basename $ZIPFILE)
 
-if [ "$CATEGORY" == "BulkNormal" ] || [ "$CATEGORY" == "BulkNoSize" ]; then
-    mkdir ~/duplicati_testdata/data
-    unzip -q ~/download/bulk/data.zip -d ~/duplicati_testdata/
-    list_dir ~/duplicati_testdata/data
+    echo "travis_fold:end:download_extract_testdata"
 fi
 
 chown -R $TESTUSER ~/duplicati_testdata/
 chmod -R 755 ~/duplicati_testdata
-echo "travis_fold:end:download_extract_testdata"
 
 # run unit tests
 echo "travis_fold:start:unit_test"
