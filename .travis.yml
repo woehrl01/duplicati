@@ -9,7 +9,7 @@ addons:
       description: "Duplicati Build submitted via Travis CI"
     notification_email: kenneth@duplicati.com
     build_command_prepend: "msbuild /t:Clean"
-    build_command:   "msbuild /t:Rebuild"
+    build_command: "msbuild /t:Rebuild"
     branch_pattern: coverity_scan
 env:
   global:
@@ -20,30 +20,40 @@ env:
     - USAGEREPORTER_Duplicati_LEVEL=none
     - AUTOUPDATER_Duplicati_SKIP_UPDATE=1
     - TMPDIR=$HOME/tmp
-script:
-  - ./BuildTools/scripts/travis-test.sh $TRAVIS_BUILD_DIR $CATEGORY $ZIPFILE
 
+
+# matrix expansion within jobs would be good: https://github.com/travis-ci/travis-ci/issues/8295
 jobs:
   include:
     - stage: build
       script:
         - ./BuildTools/scripts/travis-build.sh
     - stage: unittests
-      - env:
+      env:
         - CATEGORY=BulkNormal
         - ZIPFILE=data.zip
-        cache:
-         directories:
-           - $HOME/download/$CATEGORY
-           - ZIPFILE=data.zip
-      - env: CATEGORY=Border
-      - env: CATEGORY=Filter
-      - env:
-        - CATEGORY=SVNDataLong
-        - ZIPFILE=DSMCBE.zip
-       cache:
-         directories:
-           - $HOME/download/$CATEGORY
+      cache:
+        directories:
+          - $HOME/download/$CATEGORY
+          - ZIPFILE=data.zip
+    - stage: unittests
+      env: CATEGORY=Border
+    - stage: unittests
+      env: CATEGORY=Filter
+    # - stage: unittests
+    #  - env:
+    #         - CATEGORY=SVNDataLong
+    #         - ZIPFILE=DSMCBE.zip
+    #       cache:
+    #         directories:
+    #           - $HOME/download/$CATEGORY
+    #     - env:
+    #         - CATEGORY=SVNData
+    #         - ZIPFILE=DSMCBE.zip
+    #       cache:
+    #         directories:
+    #           - $HOME/download/$CATEGORY
+
 
     # - stage: Run unittests
     #   script: ./BuildTools/scripts/travis-test.sh Border
@@ -92,4 +102,7 @@ jobs:
     #       access_key: $SAUCE_ACCESS_KEY
 
 before_install:
-    - ./BuildTools/scripts/travis-install.sh
+  - ./BuildTools/scripts/travis-install.sh
+
+script:
+  - ./BuildTools/scripts/travis-test.sh $TRAVIS_BUILD_DIR $CATEGORY $ZIPFILE
