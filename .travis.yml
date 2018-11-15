@@ -26,9 +26,10 @@ env:
 jobs:
   include:
     - stage: build
-      script:
-        - ./BuildTools/scripts/travis-build.sh
+      install: ./BuildTools/scripts/travis-build-install.sh
+      script: ./BuildTools/scripts/travis-build.sh
     - stage: unittests
+      install: ./BuildTools/scripts/travis-test-install.sh
       env:
         - CATEGORY=BulkNormal
         - ZIPFILE=data.zip
@@ -37,22 +38,27 @@ jobs:
           - $HOME/download/$CATEGORY
           - ZIPFILE=data.zip
     - stage: unittests
+      install: ./BuildTools/scripts/travis-test-install.sh
       env: CATEGORY=Border
     - stage: unittests
+      install: ./BuildTools/scripts/travis-test-install.sh
       env: CATEGORY=Filter
-    # - stage: unittests
-    #  - env:
-    #         - CATEGORY=SVNDataLong
-    #         - ZIPFILE=DSMCBE.zip
-    #       cache:
-    #         directories:
-    #           - $HOME/download/$CATEGORY
-    #     - env:
-    #         - CATEGORY=SVNData
-    #         - ZIPFILE=DSMCBE.zip
-    #       cache:
-    #         directories:
-    #           - $HOME/download/$CATEGORY
+    - stage: unittests
+      install: ./BuildTools/scripts/travis-test-install.sh
+      env:
+        - CATEGORY=SVNDataLong
+        - ZIPFILE=DSMCBE.zip
+      cache:
+        directories:
+          - $HOME/download/$CATEGORY
+    - stage: unittests
+      install: ./BuildTools/scripts/travis-test-install.sh
+      env:
+        - CATEGORY=SVNData
+        - ZIPFILE=DSMCBE.zip
+      cache:
+        directories:
+          - $HOME/download/$CATEGORY
 
 
     # - stage: Run unittests
@@ -100,9 +106,6 @@ jobs:
     #     sauce_connect:
     #       username: $SAUCE_USERNAME
     #       access_key: $SAUCE_ACCESS_KEY
-
-before_install:
-  - ./BuildTools/scripts/travis-install.sh
 
 script:
   - ./BuildTools/scripts/travis-test.sh $TRAVIS_BUILD_DIR $CATEGORY $ZIPFILE
