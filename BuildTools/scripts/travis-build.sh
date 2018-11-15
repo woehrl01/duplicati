@@ -76,6 +76,7 @@ function start_test () {
 TRAVIS_BUILD_DIR=${1:-$(dirname "$0")/../..}
 CATEGORY=$2
 ZIPFILE=$3
+[[ $CATEGORY != "" ]] && SUPPRESS_BUILD_FOR_TEST="2> /dev/null"
 
-build
+eval build $SUPPRESS_BUILD_FOR_TEST
 [[ $CATEGORY != "" ]] && start_test
