@@ -26,56 +26,69 @@ env:
     - AUTOUPDATER_Duplicati_SKIP_UPDATE=1
     - TMPDIR=$HOME/tmp
 
+matrix:
+  include:
+    env:
+      - CATEGORY=BulkNormal
+        ZIPFILE=data.zip
+    env:
+      - CATEGORY=Border
+    env:
+      - CATEGORY=Filter
+
+script:
+  - ./BuildTools/scripts/travis-test.sh $CATEGORY $ZIPFILE
+
 jobs:
   include:
-    - stage: Run unittests
-      env: CATEGORY=Border
-    - env: CATEGORY=Filter
+    - stage: Build
+      script: ./BuildTools/scripts/travis-build.sh
 
-    - env:
-        - CATEGORY=BulkNormal
-        - ZIPFILE=data.zip
-      cache:
-        directories:
-          - $HOME/download/BulkNormal
-          - ZIPFILE=data.zip
-    - env:
-        - CATEGORY=BulkNoSize
+    # - stage: Run unittests
+    #   script: ./BuildTools/scripts/travis-test.sh Border
+    # - env: CATEGORY=Filter
 
-      cache:
-        directories:
-          - $HOME/download/BulkNoSize
+    # - env:
+    #     - CATEGORY=BulkNormal
+    #     - ZIPFILE=data.zip
+    #   cache:
+    #     directories:
+    #       - $HOME/download/BulkNormal
+    #       - ZIPFILE=data.zip
+    # - env:
+    #     - CATEGORY=BulkNoSize
 
-    - env:
-        - CATEGORY=SVNData
-        - ZIPFILE=DSMCBE.zip
-      cache:
-        directories:
-          - $HOME/download/SVNData
+    #   cache:
+    #     directories:
+    #       - $HOME/download/BulkNoSize
 
-    - env:
-        - CATEGORY=SVNDataLong
-        - ZIPFILE=DSMCBE.zip
-      cache:
-        directories:
-          - $HOME/download/svn
+    # - env:
+    #     - CATEGORY=SVNData
+    #     - ZIPFILE=DSMCBE.zip
+    #   cache:
+    #     directories:
+    #       - $HOME/download/SVNData
 
-    - env: CATEGORY=Targeted
-    - env: CATEGORY=Purge
-    - env: CATEGORY=Serialization
-    - env: CATEGORY=Utility
-    - env: CATEGORY=UriUtility
-    - env: CATEGORY=WebApi
-    - env: CATEGORY=IO
+    # - env:
+    #     - CATEGORY=SVNDataLong
+    #     - ZIPFILE=DSMCBE.zip
+    #   cache:
+    #     directories:
+    #       - $HOME/download/svn
 
-    - env: CATEGORY=GUI
-      addons:
-        sauce_connect:
-          username: $SAUCE_USERNAME
-          access_key: $SAUCE_ACCESS_KEY
+    # - env: CATEGORY=Targeted
+    # - env: CATEGORY=Purge
+    # - env: CATEGORY=Serialization
+    # - env: CATEGORY=Utility
+    # - env: CATEGORY=UriUtility
+    # - env: CATEGORY=WebApi
+    # - env: CATEGORY=IO
+
+    # - env: CATEGORY=GUI
+    #   addons:
+    #     sauce_connect:
+    #       username: $SAUCE_USERNAME
+    #       access_key: $SAUCE_ACCESS_KEY
 
 before_install:
       - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
-
-script:
-  - ./BuildTools/scripts/build.sh ${CATEGORY} ${TRAVIS_BUILD_DIR}
