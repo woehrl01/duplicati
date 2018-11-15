@@ -36,7 +36,6 @@ jobs:
       cache:
         directories:
           - $HOME/download/$CATEGORY
-          - ZIPFILE=data.zip
     - stage: unittests
       install: ./BuildTools/scripts/travis-test-install.sh
       env: CATEGORY=Border

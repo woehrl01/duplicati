@@ -15,6 +15,7 @@ trap 'quit_on_error $LINENO' ERR
 TRAVIS_BUILD_DIR=${1:-$(dirname "$0")/../..}
 CATEGORY=$2
 ZIPFILE=$3
+export UNITTEST_BASEFOLDER=~/duplicati_testdata/"${CATEGORY}"
 
 if id travis &> /dev/null
 then
@@ -23,20 +24,10 @@ else
   TESTUSER=$(whoami)
 fi
 
-echo "Build script starting with parameters TRAVIS_BUILD_DIR=$TRAVIS_BUILD_DIR and CATEGORY=$CATEGORY"
-
-# build duplicati
-
-echo "travis_fold:start:build_duplicati"
-echo "building binaries"
-msbuild /p:Configuration=Release "${TRAVIS_BUILD_DIR}"/Duplicati.sln
-cp -r "${TRAVIS_BUILD_DIR}"/Duplicati/Server/webroot "${TRAVIS_BUILD_DIR}"/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/webroot
-echo "travis_fold:end:build_duplicati"
-
 # prepare dirs
 if [ ! -d ~/tmp ]; then mkdir ~/tmp; fi
 if [ ! -d ~/download/"${CATEGORY}" ]; then mkdir ~/download/"${CATEGORY}"; fi
-rm -rf ~/duplicati_testdata/"${CATEGORY}" && mkdir -p ~/duplicati_testdata/"${CATEGORY}"
+rm -rf ${UNITTEST_BASEFOLDER} && mkdir -p ${UNITTEST_BASEFOLDER}
 
 if [[ -z $ZIPFILE ]]; then
     # download and extract testdata
@@ -48,27 +39,22 @@ if [[ -z $ZIPFILE ]]; then
 
     list_dir ~/download/"${CATEGORY}"
 
-    unzip -q ~/download/"${CATEGORY}"/"${ZIPFILE}" -d ~/duplicati_testdata/"${CATEGORY}"/
+    unzip -q ~/download/"${CATEGORY}"/"${ZIPFILE}" -d ${UNITTEST_BASEFOLDER}
     list_dir ~/duplicati_testdata/"${CATEGORY}"/$(basename $ZIPFILE)
 
     echo "travis_fold:end:download_extract_testdata"
 fi
 
-chown -R $TESTUSER ~/duplicati_testdata/
-chmod -R 755 ~/duplicati_testdata
+chown -R $TESTUSER ${UNITTEST_BASEFOLDER}
+chmod -R 755 ${UNITTEST_BASEFOLDER}
 
 # run unit tests
 echo "travis_fold:start:unit_test"
-if [[ "$CATEGORY" != "GUI"  && "$CATEGORY" != "" ]]; then
+if [[ "$CATEGORY" != "GUI" ]]; then
     mono "${TRAVIS_BUILD_DIR}"/testrunner/NUnit.ConsoleRunner.3.5.0/tools/nunit3-console.exe \
     "${TRAVIS_BUILD_DIR}"/Duplicati/UnitTest/bin/Release/Duplicati.UnitTest.dll --where:cat==$CATEGORY --workers=1
-fi
-echo "travis_fold:end:unit_test"
-
-# start server and run gui tests
-echo "travis_fold:start:gui_unit_test"
-if [[ "$CATEGORY" == "GUI" ]]; then
+else
     mono "${TRAVIS_BUILD_DIR}"/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/Duplicati.Server.exe &
     python guiTests/guiTest.py
 fi
-echo "travis_fold:end:gui_unit_test"
+echo "travis_fold:end:unit_test"
