@@ -1,6 +1,3 @@
-
-
-
 quit_on_error() {
   local parent_lineno="$1"
   local message="$2"

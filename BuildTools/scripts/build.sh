@@ -13,7 +13,7 @@ list_dir() {
 trap 'quit_on_error $LINENO' ERR
 
 CATEGORY=$1
-TRAVIS_BUILD_DIR=${2:-.}
+TRAVIS_BUILD_DIR=${2:-$(dirname "$0")/../..}
 
 if id travis &> /dev/null
 then
@@ -28,13 +28,13 @@ echo "Build script starting with parameters TRAVIS_BUILD_DIR=$TRAVIS_BUILD_DIR a
 
 list_dir "${TRAVIS_BUILD_DIR}"/packages/
 echo "travis_fold:start:build_duplicati"
-msbuild /p:Configuration=Release Duplicati.sln
-cp -r ./Duplicati/Server/webroot ./Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/webroot
+msbuild /p:Configuration=Release "${TRAVIS_BUILD_DIR}"/Duplicati.sln
+cp -r "${TRAVIS_BUILD_DIR}"/Duplicati/Server/webroot "${TRAVIS_BUILD_DIR}"/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/webroot
 echo "travis_fold:end:build_duplicati"
 
 # download and extract testdata
 echo "travis_fold:start:download_extract_testdata"
-list_dir .
+list_dir "${TRAVIS_BUILD_DIR}"
 
 if [ ! -d ~/tmp ]; then mkdir ~/tmp; fi
 if [ ! -d ~/download ]; then mkdir ~/download; fi
@@ -76,15 +76,15 @@ echo "travis_fold:end:download_extract_testdata"
 # run unit tests
 echo "travis_fold:start:unit_test"
 if [[ "$CATEGORY" != "GUI"  && "$CATEGORY" != "" ]]; then
-    mono ./testrunner/NUnit.ConsoleRunner.3.5.0/tools/nunit3-console.exe \
-    ./Duplicati/UnitTest/bin/Release/Duplicati.UnitTest.dll --where:cat==$CATEGORY --workers=1
+    mono "${TRAVIS_BUILD_DIR}"/testrunner/NUnit.ConsoleRunner.3.5.0/tools/nunit3-console.exe \
+    "${TRAVIS_BUILD_DIR}"/Duplicati/UnitTest/bin/Release/Duplicati.UnitTest.dll --where:cat==$CATEGORY --workers=1
 fi
 echo "travis_fold:end:unit_test"
 
 # start server and run gui tests
 echo "travis_fold:start:gui_unit_test"
 if [[ "$CATEGORY" == "GUI" ]]; then
-    mono ./Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/Duplicati.Server.exe &
+    mono "${TRAVIS_BUILD_DIR}"/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/Duplicati.Server.exe &
     python guiTests/guiTest.py
 fi
 echo "travis_fold:end:gui_unit_test"
