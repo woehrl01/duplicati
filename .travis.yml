@@ -36,9 +36,7 @@ jobs:
         directories:
           - $HOME/download/$TEST_CATEGORY
     - stage: unittests
-      env: TEST_CATEGORY=Border
-    - stage: unittests
-      env: TEST_CATEGORY=Filter
+      env: TEST_CATEGORY=Border,FILTER
     - stage: unittests
       env:
         - TEST_CATEGORY=SVNDataLong
@@ -65,9 +63,7 @@ jobs:
     - stage: unittests
       env: TEST_CATEGORY=Serialization
     - stage: unittests
-      env: TEST_CATEGORY=Utility
-    - stage: unittests
-      env: TEST_CATEGORY=UriUtility
+      env: TEST_CATEGORY=Utility,UriUtility
     - stage: unittests
       env: TEST_CATEGORY=WebApi
     - stage: unittests

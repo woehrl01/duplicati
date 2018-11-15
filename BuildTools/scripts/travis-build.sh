@@ -24,11 +24,6 @@ function get_and_extract_test_zip () {
     # download and extract testdata
     echo "travis_fold:start:download_extract_testdata"
 
-    # prepare dirs
-    if [ ! -d ~/tmp ]; then mkdir ~/tmp; fi
-    if [ ! -d ~/download/"${CATEGORY}" ]; then mkdir ~/download/"${CATEGORY}"; fi
-    rm -rf ${UNITTEST_BASEFOLDER} && mkdir -p ${UNITTEST_BASEFOLDER}
-
     # test if zip file exists and contains no errors, otherwise redownload
     unzip -t ~/download/"${CATEGORY}"/"${ZIPFILE}" &> /dev/null || \
     wget --progress=dot:giga "https://s3.amazonaws.com/duplicati-test-file-hosting/${ZIPFILE}" -O ~/download/"${CATEGORY}"/"${ZIPFILE}"
@@ -54,23 +49,31 @@ function set_permissions () {
 }
 
 function start_test () {
+    for CAT in $(echo $CATEGORY | sed "s/,/ /g")
+    do
+        # prepare dirs
+        if [ ! -d ~/tmp ]; then mkdir ~/tmp; fi
+        if [ ! -d ~/download/"${CATEGORY}" ]; then mkdir ~/download/"${CATEGORY}"; fi
+        rm -rf ${UNITTEST_BASEFOLDER} && mkdir -p ${UNITTEST_BASEFOLDER}
 
-    if [[ $ZIPFILE != "" ]]; then
-        get_and_extract_test_zip
-    fi
+        if [[ $ZIPFILE != "" ]]; then
+            get_and_extract_test_zip
+        fi
 
-    set_permissions
+        set_permissions
 
-    export UNITTEST_BASEFOLDER=~/duplicati_testdata/"${CATEGORY}"
-    echo "travis_fold:start:unit_test"
-    if [[ "$CATEGORY" != "GUI" ]]; then
-        mono "${TRAVIS_BUILD_DIR}"/testrunner/NUnit.ConsoleRunner.3.5.0/tools/nunit3-console.exe \
-        "${TRAVIS_BUILD_DIR}"/Duplicati/UnitTest/bin/Release/Duplicati.UnitTest.dll --where:cat==$CATEGORY --workers=1
-    else
-        mono "${TRAVIS_BUILD_DIR}"/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/Duplicati.Server.exe &
-        python guiTests/guiTest.py
-    fi
-    echo "travis_fold:end:unit_test"
+        export UNITTEST_BASEFOLDER=~/duplicati_testdata/"${CAT}"
+
+        echo "travis_fold:start:unit_test_$CAT"
+        if [[ "$CAT" != "GUI" ]]; then
+            mono "${TRAVIS_BUILD_DIR}"/testrunner/NUnit.ConsoleRunner.3.5.0/tools/nunit3-console.exe \
+            "${TRAVIS_BUILD_DIR}"/Duplicati/UnitTest/bin/Release/Duplicati.UnitTest.dll --where:cat==$CAT --workers=1
+        else
+            mono "${TRAVIS_BUILD_DIR}"/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/Duplicati.Server.exe &
+            python guiTests/guiTest.py
+        fi
+        echo "travis_fold:end:unit_test_$CAT"
+    done
 }
 
 TRAVIS_BUILD_DIR=${1:-$(dirname "$0")/../..}
