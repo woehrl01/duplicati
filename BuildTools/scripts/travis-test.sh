@@ -12,8 +12,9 @@ list_dir() {
 
 trap 'quit_on_error $LINENO' ERR
 
-CATEGORY=$1
-TRAVIS_BUILD_DIR=${2:-$(dirname "$0")/../..}
+TRAVIS_BUILD_DIR=${1:-$(dirname "$0")/../..}
+CATEGORY=$2
+ZIPFILE=$3
 
 if id travis &> /dev/null
 then
