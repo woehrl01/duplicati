@@ -1,7 +1,8 @@
 language: csharp
 solution: Duplicati.sln
 dotnet: 2.0.0
-install: skip
+install: ./BuildTools/scripts/travis-install.sh
+script: ./BuildTools/scripts/travis.sh $TRAVIS_BUILD_DIR $TEST_CATEGORY $ZIPFILE
 addons:
   coverity_scan:
     project:
@@ -22,89 +23,58 @@ env:
     - TMPDIR=$HOME/tmp
 
 
-# matrix expansion within jobs would be good: https://github.com/travis-ci/travis-ci/issues/8295
+# matrix expansion within jobs would be good:
+# https://github.com/travis-ci/travis-ci/issues/8295
 jobs:
   include:
     - stage: build
-      install: ./BuildTools/scripts/travis-build-install.sh
-      script: ./BuildTools/scripts/travis-build.sh
     - stage: unittests
-      install: ./BuildTools/scripts/travis-test-install.sh
       env:
-        - CATEGORY=BulkNormal
+        - TEST_CATEGORY=BulkNormal
         - ZIPFILE=data.zip
       cache:
         directories:
-          - $HOME/download/$CATEGORY
+          - $HOME/download/$TEST_CATEGORY
     - stage: unittests
-      install: ./BuildTools/scripts/travis-test-install.sh
-      env: CATEGORY=Border
+      env: TEST_CATEGORY=Border
     - stage: unittests
-      install: ./BuildTools/scripts/travis-test-install.sh
-      env: CATEGORY=Filter
+      env: TEST_CATEGORY=Filter
     - stage: unittests
-      install: ./BuildTools/scripts/travis-test-install.sh
       env:
-        - CATEGORY=SVNDataLong
+        - TEST_CATEGORY=SVNDataLong
         - ZIPFILE=DSMCBE.zip
       cache:
         directories:
-          - $HOME/download/$CATEGORY
+          - $HOME/download/$TEST_CATEGORY
     - stage: unittests
-      install: ./BuildTools/scripts/travis-test-install.sh
       env:
-        - CATEGORY=SVNData
+        - TEST_CATEGORY=SVNData
         - ZIPFILE=DSMCBE.zip
       cache:
         directories:
-          - $HOME/download/$CATEGORY
-
-
-    # - stage: Run unittests
-    #   script: ./BuildTools/scripts/travis-test.sh Border
-    # - env: CATEGORY=Filter
-
-    # - env:
-    #     - CATEGORY=BulkNormal
-    #     - ZIPFILE=data.zip
-    #   cache:
-    #     directories:
-    #       - $HOME/download/BulkNormal
-    #       - ZIPFILE=data.zip
-    # - env:
-    #     - CATEGORY=BulkNoSize
-
-    #   cache:
-    #     directories:
-    #       - $HOME/download/BulkNoSize
-
-    # - env:
-    #     - CATEGORY=SVNData
-    #     - ZIPFILE=DSMCBE.zip
-    #   cache:
-    #     directories:
-    #       - $HOME/download/SVNData
-
-    # - env:
-    #     - CATEGORY=SVNDataLong
-    #     - ZIPFILE=DSMCBE.zip
-    #   cache:
-    #     directories:
-    #       - $HOME/download/svn
-
-    # - env: CATEGORY=Targeted
-    # - env: CATEGORY=Purge
-    # - env: CATEGORY=Serialization
-    # - env: CATEGORY=Utility
-    # - env: CATEGORY=UriUtility
-    # - env: CATEGORY=WebApi
-    # - env: CATEGORY=IO
-
-    # - env: CATEGORY=GUI
-    #   addons:
-    #     sauce_connect:
-    #       username: $SAUCE_USERNAME
-    #       access_key: $SAUCE_ACCESS_KEY
-
-script:
-  - ./BuildTools/scripts/travis-test.sh $TRAVIS_BUILD_DIR $CATEGORY $ZIPFILE
+          - $HOME/download/$TEST_CATEGORY
+    - stage: unittests
+      env: TEST_CATEGORY=BulkNoSize
+      cache:
+        directories:
+          - $HOME/download/BulkNoSize
+    - stage: unittests
+      env: TEST_CATEGORY=Targeted
+    - stage: unittests
+      env: TEST_CATEGORY=Purge
+    - stage: unittests
+      env: TEST_CATEGORY=Serialization
+    - stage: unittests
+      env: TEST_CATEGORY=Utility
+    - stage: unittests
+      env: TEST_CATEGORY=UriUtility
+    - stage: unittests
+      env: TEST_CATEGORY=WebApi
+    - stage: unittests
+      env: TEST_CATEGORY=IO
+    - stage: unittests
+      env: TEST_CATEGORY=GUI
+      addons:
+        sauce_connect:
+          username: $SAUCE_USERNAME
+          access_key: $SAUCE_ACCESS_KEY
