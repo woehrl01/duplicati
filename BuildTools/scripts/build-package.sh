@@ -213,8 +213,6 @@ function generate_package () {
 	# if zip is not written, non-zero return code will cause script to stop
 	"${MONO}" "BuildTools/AutoUpdateBuilder/bin/Release/AutoUpdateBuilder.exe" $auto_update_options
 
-	echo "${RELEASE_INC_VERSION}" > "Updates/build_version.txt"
-
 	mv "${UPDATE_TARGET}/package.zip" "${UPDATE_TARGET}/latest.zip"
 	mv "${UPDATE_TARGET}/autoupdate.manifest" "${UPDATE_TARGET}/latest.manifest"
 	cp "${UPDATE_TARGET}/latest.zip" "${UPDATE_TARGET}/${RELEASE_FILE_NAME}.zip"
@@ -388,9 +386,9 @@ echo "generating package zipfile" && eval generate_package $REDIRECT
 
 eval reset_version $REDIRECT
 
-! $LOCAL && echo "+ uploading to AWS" && upload_binaries_to_aws
-
 ! $LOCAL && echo "+ updating git repo" && update_git_repo
+
+! $LOCAL && echo "+ uploading to AWS" && upload_binaries_to_aws
 
 ! $LOCAL && echo "+ releasing to github" && release_to_github
 

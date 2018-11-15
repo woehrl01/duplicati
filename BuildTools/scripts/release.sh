@@ -1,4 +1,20 @@
 
+
+
+
+function increase_release_number () {
+    echo "${RELEASE_INC_VERSION}" > "Updates/build_version.txt"
+}
+
+
+RELEASE_TIMESTAMP=$(date +%Y-%m-%d)
+RELEASE_INC_VERSION=$(cat Updates/build_version.txt)
+RELEASE_INC_VERSION=$((RELEASE_INC_VERSION+1))
+RELEASE_VERSION="2.0.4.${RELEASE_INC_VERSION}"
+RELEASE_NAME="${RELEASE_VERSION}_${RELEASE_TYPE}_${RELEASE_TIMESTAMP}"
+RELEASE_FILE_NAME="duplicati-${RELEASE_NAME}"
+
+
 bash "build-release.sh" "${UPDATE_TARGET}/${RELEASE_FILE_NAME}.zip"
 
 echo

@@ -1,8 +1,10 @@
 language: csharp
 solution: Duplicati.sln
 dotnet: 2.0.0
-install: ./BuildTools/scripts/travis-install.sh
-script: ./BuildTools/scripts/travis.sh $TRAVIS_BUILD_DIR $TEST_CATEGORY $ZIPFILE
+before_install:
+  - sudo apt-get install moreutils
+install: ./BuildTools/scripts/travis-install.sh $TEST_CATEGORIES | ts
+script: ./BuildTools/scripts/travis.sh $TRAVIS_BUILD_DIR $TEST_CATEGORIES $ZIPFILE | ts
 addons:
   coverity_scan:
     project:
@@ -28,43 +30,36 @@ env:
 jobs:
   include:
     - stage: build
-    - stage: unittests
+    - stage: unit tests
       env:
-        - TEST_CATEGORY=BulkNormal
+        - TEST_CATEGORIES=BulkNormal
         - ZIPFILE=data.zip
       cache:
         directories:
-          - $HOME/download/$TEST_CATEGORY
-    - stage: unittests
-      env: TEST_CATEGORY=Border,FILTER
-    - stage: unittests
+          - $HOME/download/
+    - stage: unit tests
       env:
-        - TEST_CATEGORY=SVNDataLong
+        - TEST_CATEGORIES=BulkNoSize
+        - ZIPFILE=data.zip
+      cache:
+        directories:
+          - $HOME/download/
+    - stage: unit tests
+      env:
+        - TEST_CATEGORIES=SVNDataLong,SVNData
         - ZIPFILE=DSMCBE.zip
       cache:
         directories:
-          - $HOME/download/$TEST_CATEGORY
-    - stage: unittests
-      env:
-        - TEST_CATEGORY=SVNData
-        - ZIPFILE=DSMCBE.zip
-      cache:
-        directories:
-          - $HOME/download/$TEST_CATEGORY
-    - stage: unittests
-      env: TEST_CATEGORY=BulkNoSize
-      cache:
-        directories:
-          - $HOME/download/BulkNoSize
-    - stage: unittests
-      env: TEST_CATEGORY=Targeted,Purge,Serialization
-    - stage: unittests
-      env: TEST_CATEGORY=Utility,UriUtility
-    - stage: unittests
-      env: TEST_CATEGORY=WebApi,IO
-    - stage: unittests
-      env: TEST_CATEGORY=GUI
+          - $HOME/download/
+    - stage: unit tests
+      env: TEST_CATEGORIES=GUI
       addons:
         sauce_connect:
           username: $SAUCE_USERNAME
           access_key: $SAUCE_ACCESS_KEY
+    - stage: unit tests
+      env: TEST_CATEGORIES=Border,FILTER,Targeted
+    - stage: unit tests
+      env: TEST_CATEGORIES=Purge,Serialization,WebApi
+    - stage: unit tests
+      env: TEST_CATEGORIES=Utility,UriUtility,IO
