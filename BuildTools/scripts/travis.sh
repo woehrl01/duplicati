@@ -83,3 +83,4 @@ ZIPFILE=$3
 
 eval build $SUPPRESS_BUILD_FOR_TEST
 [[ $CATEGORY != "" ]] && start_test
+exit 0

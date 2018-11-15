@@ -57,17 +57,11 @@ jobs:
         directories:
           - $HOME/download/BulkNoSize
     - stage: unittests
-      env: TEST_CATEGORY=Targeted
-    - stage: unittests
-      env: TEST_CATEGORY=Purge
-    - stage: unittests
-      env: TEST_CATEGORY=Serialization
+      env: TEST_CATEGORY=Targeted,Purge,Serialization
     - stage: unittests
       env: TEST_CATEGORY=Utility,UriUtility
     - stage: unittests
-      env: TEST_CATEGORY=WebApi
-    - stage: unittests
-      env: TEST_CATEGORY=IO
+      env: TEST_CATEGORY=WebApi,IO
     - stage: unittests
       env: TEST_CATEGORY=GUI
       addons:
