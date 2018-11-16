@@ -81,6 +81,7 @@ function check_docker () {
 }
 
 UNSIGNED=false
+LOCAL=false
 
 while true ; do
     case "$1" in
@@ -92,7 +93,7 @@ while true ; do
         exit 0
         ;;
 	--local)
-		BUILD_LOCAL=true
+		LOCAL=true
 		;;
 	--unsigned)
 		UNSIGNED=true
@@ -117,6 +118,9 @@ while true ; do
     esac
     shift
 done
+
+build_installer_debian
+exit 0
 
 
 GITHUB_TOKEN_FILE="${HOME}/.config/github-api-token"
