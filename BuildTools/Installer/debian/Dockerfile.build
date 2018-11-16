@@ -8,6 +8,7 @@ ENV DOCKER_BUILD_PROXY $DOCKER_BUILD_PROXY
 RUN set -uex; \
     export http_proxy=${HTTP_PROXY-${DOCKER_BUILD_PROXY}}; \
     apt-get update; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata; \
     apt-get install --no-install-suggests --no-install-recommends -y \
       build-essential \
       debhelper \
@@ -25,4 +26,4 @@ label org.label-schema.name = "duplicati/debian-build" \
       org.label-schema.version = "20161230" \
       org.label-schema.vendor="Deployable" \
       org.label-schema.docker.cmd="docker run -ti duplicati/debian-build" \
-      org.label-schema.schema-version="1.0" 
+      org.label-schema.schema-version="1.0"
