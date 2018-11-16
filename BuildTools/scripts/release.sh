@@ -131,7 +131,7 @@ echo "Building installers ..."
 # Send the password along to avoid typing it again
 export KEYFILE_PASSWORD
 
-bash "build-installers.sh" "${UPDATE_TARGET}/${RELEASE_FILE_NAME}.zip"
+bash "build-installers.sh" --target-dir "${UPDATE_TARGET}" "${UPDATE_TARGET}/${RELEASE_FILE_NAME}.zip"
 
 increase_release_number
 echo "+ updating git repo" && update_git_repo

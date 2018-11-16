@@ -5,6 +5,7 @@ quit_on_error() {
     exit 1
 }
 
+set -eE
 trap 'quit_on_error $LINENO' ERR
 
 function build_installer_debian () {
@@ -16,15 +17,11 @@ function build_installer_debian () {
 	echo ""
 	echo "Building Debian deb with Docker ..."
 
-	cd "Installer/debian"
-	bash "docker-build-binary.sh" "../../$1"
-	cd "../.."
+	bash ../Installer/debian/docker-build-binary.sh "${ZIPFILE}"
 
-	mv "Installer/debian/${DEBNAME}" "${UPDATE_TARGET}"
+	mv ../Installer/debian/${DEBNAME} "${UPDATE_TARGET}"
 
 	echo "Done building deb package"
-
-	exit 0
 }
 
 function build_file_signatures() {
@@ -86,7 +83,7 @@ LOCAL=false
 while true ; do
     case "$1" in
     --debian)
-		build_installer_debian
+		INSTALLERS="${INSTALLERS},debian"
         ;;
     --help)
         show_help
@@ -98,27 +95,38 @@ while true ; do
 	--unsigned)
 		UNSIGNED=true
 		;;
+	--target-dir)
+		UPDATE_TARGET=$2
+		shift
+		;;
     --* | -* )
         echo "unknown option $1, please use --help."
         exit 1
         ;;
     * )
-		if [ ! -f "$1" ]
+		ZIPFILE=$1
+		if [ ! -f "$ZIPFILE" ]
 		then
 			echo "Please supply the path to an existing zip binary as the first argument"
 			exit 1
 		fi
 
-		if [ ! -f "$2" ]
-		then
-			echo "Please supply the format as the second argument"
-			exit 1
-		fi
+		# if [ ! -f "$2" ]
+		# then
+		# 	echo "Please supply the format as the second argument"
+		# 	exit 1
+		# fi
+		break
         ;;
     esac
     shift
 done
 
+RELEASE_FILE_NAME=$(basename "$ZIPFILE" .zip)
+VERSION=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 1)
+BUILDTYPE=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 2)
+BUILDTAG_RAW=$(echo "${RELEASE_FILE_NAME}" | cut -d "." -f 1-4 | cut -d "-" -f 2-4)
+BUILDTAG="${BUILDTAG_RAW//-}"
 build_installer_debian
 exit 0
 
@@ -131,11 +139,6 @@ MONO=/Library/Frameworks/Mono.framework/Commands/mono
 
 GPG=/usr/local/bin/gpg2
 
-ZIPFILE=$(basename "$1")
-VERSION=$(echo "${ZIPFILE}" | cut -d "-" -f 2 | cut -d "_" -f 1)
-BUILDTYPE=$(echo "${ZIPFILE}" | cut -d "-" -f 2 | cut -d "_" -f 2)
-BUILDTAG_RAW=$(echo "${ZIPFILE}" | cut -d "." -f 1-4 | cut -d "-" -f 2-4)
-BUILDTAG="${BUILDTAG_RAW//-}"
 
 RPMNAME="duplicati-${VERSION}-${BUILDTAG}.noarch.rpm"
 
