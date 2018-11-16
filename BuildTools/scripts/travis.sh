@@ -40,6 +40,7 @@ function set_permissions () {
 }
 
 function start_test () {
+
     for CAT in $(echo $CATEGORIES | sed "s/,/ /g")
     do
         # prepare dirs
@@ -56,13 +57,8 @@ function start_test () {
 
         echo "travis_fold:start:unit_test_$CAT"
         echo "+ UNIT TESTING CATEGORY $CAT"
-        if [[ "$CAT" != "GUI" ]]; then
-            mono "${TRAVIS_BUILD_DIR}"/testrunner/NUnit.ConsoleRunner.3.5.0/tools/nunit3-console.exe \
-            "${TRAVIS_BUILD_DIR}"/Duplicati/UnitTest/bin/Release/Duplicati.UnitTest.dll --where:cat==$CAT --workers=1
-        else
-            mono "${TRAVIS_BUILD_DIR}"/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/Duplicati.Server.exe &
-            python guiTests/guiTest.py
-        fi
+        mono "${TRAVIS_BUILD_DIR}"/testrunner/NUnit.ConsoleRunner.3.5.0/tools/nunit3-console.exe \
+        "${TRAVIS_BUILD_DIR}"/Duplicati/UnitTest/bin/Release/Duplicati.UnitTest.dll --where:cat==$CAT --workers=1
         echo "travis_fold:end:unit_test_$CAT"
     done
 }
@@ -73,4 +69,6 @@ ZIPFILE=$3
 [[ $CATEGORIES != "" ]] && SUPPRESS_BUILD_FOR_TEST=" > /dev/null"
 
 eval build $SUPPRESS_BUILD_FOR_TEST
-if [[ $CATEGORIES != "" ]]; then start_test; fi
+if [[ $CATEGORIES != "" ]]; then
+    start_test
+fi

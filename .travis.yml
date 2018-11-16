@@ -3,7 +3,7 @@ solution: Duplicati.sln
 dotnet: 2.0.0
 before_install:
   - sudo apt-get install moreutils
-install: ./BuildTools/scripts/travis-install.sh $TEST_CATEGORIES | ts
+install: ./BuildTools/scripts/travis-install.sh $INSTALL_OPT | ts
 script: ./BuildTools/scripts/travis.sh $TRAVIS_BUILD_DIR $TEST_CATEGORIES $ZIPFILE | ts
 addons:
   coverity_scan:
@@ -30,8 +30,11 @@ env:
 jobs:
   include:
     - stage: build
+
+
     - stage: unit tests
       env:
+        - INSTALL_OPT=NUNIT
         - TEST_CATEGORIES=BulkNormal
         - ZIPFILE=data.zip
       cache:
@@ -39,6 +42,7 @@ jobs:
           - $HOME/download/
     - stage: unit tests
       env:
+        - INSTALL_OPT=NUNIT
         - TEST_CATEGORIES=BulkNoSize
         - ZIPFILE=data.zip
       cache:
@@ -46,20 +50,33 @@ jobs:
           - $HOME/download/
     - stage: unit tests
       env:
+        - INSTALL_OPT=NUNIT
         - TEST_CATEGORIES=SVNDataLong,SVNData
         - ZIPFILE=DSMCBE.zip
       cache:
         directories:
           - $HOME/download/
     - stage: unit tests
-      env: TEST_CATEGORIES=GUI
+      env:
+        - TEST_CATEGORIES=Border,FILTER,Targeted
+        - INSTALL_OPT=NUNIT
+    - stage: unit tests
+      env:
+        - TEST_CATEGORIES=Purge,Serialization,WebApi
+        - INSTALL_OPT=NUNIT
+    - stage: unit tests
+      env:
+        - TEST_CATEGORIES=Utility,UriUtility,IO
+        - INSTALL_OPT=NUNIT
+
+
+    - stage: integration tests
+      env: INSTALL_OPT=SELENIUM
+      script:
+        - ./BuildTools/scripts/travis.sh $TRAVIS_BUILD_DIR
+        - mono "${TRAVIS_BUILD_DIR}"/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/Duplicati.Server.exe &
+        - python guiTests/guiTest.py | ts
       addons:
         sauce_connect:
           username: $SAUCE_USERNAME
           access_key: $SAUCE_ACCESS_KEY
-    - stage: unit tests
-      env: TEST_CATEGORIES=Border,FILTER,Targeted
-    - stage: unit tests
-      env: TEST_CATEGORIES=Purge,Serialization,WebApi
-    - stage: unit tests
-      env: TEST_CATEGORIES=Utility,UriUtility,IO

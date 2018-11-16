@@ -5,12 +5,14 @@ echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CER
 nuget restore Duplicati.sln
 
 # install selenium only for testing
-CATEGORIES=$1
+INSTALL_OPT=$1
 
-if [[ $CATEGORIES =~ "GUI" ]]; then
+if [[ $INSTALL_OPT =~ "SELENIUM" ]]; then
     sudo pip install selenium
     sudo pip install --upgrade urllib3
-elif [[ $CATEGORIES != "" ]]; then
+fi
+
+if [[ $INSTALL_OPT =~ "NUNIT" ]]; then
     nuget install NUnit.Runners -Version 3.5.0 -OutputDirectory testrunner
 fi
 

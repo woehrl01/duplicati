@@ -202,3 +202,5 @@ driver.quit()
 
 if not (sha1_source == sha1_restore and sha1_source == sha1_direct_restore):
     sys.exit(1)  # return with error
+
+print "GUI test successful"
