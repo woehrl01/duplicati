@@ -1,39 +1,47 @@
 #!/bin/bash
 
-if [ ! -f "$1" ]; then
-	echo "Please provide the filename of an existing zip build as the first argument"
-	exit
-fi
+quit_on_error() {
+    echo "Error on line $1, stopping build of installer(s)."
+    exit 1
+}
 
-FILENAME=$(basename $1)
+set -eE
+trap 'quit_on_error $LINENO' ERR
+
+ZIPFILE=$1
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
+FILENAME=$(basename $ZIPFILE)
 DIRNAME=$(echo "${FILENAME}" | cut -d "_" -f 1)
 VERSION=$(echo "${DIRNAME}" | cut -d "-" -f 2)
 BUILDDATE=$(date +%Y%m%d)
 BUILDTAG_RAW=$(echo "${FILENAME}" | cut -d "." -f 1-4 | cut -d "-" -f 2-4)
 BUILDTAG="${BUILDTAG_RAW//-}"
-CWD=$(pwd)
+
+if [ ! -f "$1" ]; then
+	echo "Please provide the filename of an existing zip build as the first argument"
+	exit
+fi
 
 echo "BUILDTAG: ${BUILDTAG}"
 echo "Version: ${VERSION}"
 echo "Builddate: ${BUILDDATE}"
 echo "Dirname: ${DIRNAME}"
 
-#DIRNAME="duplicati-${BUILDDATE}"
-if [ -d "${DIRNAME}" ]; then
-	rm -rf "${DIRNAME}"
+if [ -d "${SCRIPT_DIR}/${DIRNAME}" ]; then
+	rm -rf "${SCRIPT_DIR}/${DIRNAME}"
 fi
-unzip -q -d "${DIRNAME}" "$1"
 
+unzip -q -d "${SCRIPT_DIR}/${DIRNAME}" "$ZIPFILE"
 
-cp ../debian/*-launcher.sh "${DIRNAME}"
-cp ../debian/duplicati.png "${DIRNAME}"
-cp ../debian/duplicati.desktop "${DIRNAME}"
+cp ${SCRIPT_DIR}/../debian/*-launcher.sh "${SCRIPT_DIR}/${DIRNAME}"
+cp ${SCRIPT_DIR}/../debian/duplicati.png "${SCRIPT_DIR}/${DIRNAME}"
+cp ${SCRIPT_DIR}/../debian/duplicati.desktop "${SCRIPT_DIR}/${DIRNAME}"
 
 for n in "../oem" "../../oem" "../../../oem"
 do
-    if [ -d $n ]; then
+    if [ -d "${SCRIPT_DIR}/$n" ]; then
         echo "Installing OEM files"
-        cp -R $n "${DIRNAME}/webroot/"
+        cp -R "${SCRIPT_DIR}/$n" "${SCRIPT_DIR}/${DIRNAME}/webroot/"
     fi
 done
 
@@ -41,44 +49,49 @@ for n in "oem-app-name.txt" "oem-update-url.txt" "oem-update-key.txt" "oem-updat
 do
     for p in "../$n" "../../$n" "../../../$n"
     do
-        if [ -f $p ]; then
+        if [ -f "${SCRIPT_DIR}/$p" ]; then
             echo "Installing OEM override file"
-            cp $p "${DIRNAME}"
+            cp "${SCRIPT_DIR}/$p" "${SCRIPT_DIR}/${DIRNAME}"
         fi
     done
 done
 
-tar -cjf "${DIRNAME}.tar.bz2" "${DIRNAME}"
-rm -rf "${DIRNAME}"
+tar -cjf "${SCRIPT_DIR}/${DIRNAME}.tar.bz2" -C ${SCRIPT_DIR} "${DIRNAME}"
+rm -rf "${SCRIPT_DIR}/${DIRNAME}"
 
-RPMBUILD="${CWD}/${DIRNAME}-rpmbuild"
+RPMBUILD="${SCRIPT_DIR}/${DIRNAME}-rpmbuild"
 if [ -d "${RPMBUILD}" ]; then
     rm -rf "${RPMBUILD}"
 fi
 
 mkdir -p "${RPMBUILD}"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
-mv "${DIRNAME}.tar.bz2" "${RPMBUILD}/SOURCES/"
-cp duplicati.xpm "${RPMBUILD}/SOURCES/"
-cp make-binary-package.sh "${RPMBUILD}/SOURCES/duplicati-make-binary-package.sh"
-cp duplicati-install-recursive.sh "${RPMBUILD}/SOURCES/duplicati-install-recursive.sh"
-cp duplicati.service "${RPMBUILD}/SOURCES/duplicati.service"
-cp duplicati.default "${RPMBUILD}/SOURCES/duplicati.default"
+mv "${SCRIPT_DIR}/${DIRNAME}.tar.bz2" "${RPMBUILD}/SOURCES/"
+cp "${SCRIPT_DIR}"/duplicati.xpm "${RPMBUILD}/SOURCES/"
+cp "${SCRIPT_DIR}"/make-binary-package.sh "${RPMBUILD}/SOURCES/duplicati-make-binary-package.sh"
+cp "${SCRIPT_DIR}"/duplicati-install-recursive.sh "${RPMBUILD}/SOURCES/duplicati-install-recursive.sh"
+cp "${SCRIPT_DIR}"/duplicati.service "${RPMBUILD}/SOURCES/duplicati.service"
+cp "${SCRIPT_DIR}"/duplicati.default "${RPMBUILD}/SOURCES/duplicati.default"
 
 echo "%global _builddate ${BUILDDATE}" > "${RPMBUILD}/SOURCES/duplicati-buildinfo.spec"
 echo "%global _buildversion ${VERSION}" >> "${RPMBUILD}/SOURCES/duplicati-buildinfo.spec"
 echo "%global _buildtag ${BUILDTAG}" >> "${RPMBUILD}/SOURCES/duplicati-buildinfo.spec"
 
-docker build -t "duplicati/fedora-build:latest" - < Dockerfile.build
+docker build -t "duplicati/fedora-build:latest" - < "${SCRIPT_DIR}/Dockerfile.build"
 
 # Weirdness with time not being synced in Docker instance
 sleep 5
 docker run  \
     --workdir "/buildroot" \
-    --volume "${CWD}":"/buildroot":"rw" \
+    --volume "${SCRIPT_DIR}":"/buildroot":"rw" \
     --volume "${RPMBUILD}":"/root/rpmbuild":"rw" \
     "duplicati/fedora-build:latest" \
     rpmbuild -bb duplicati-binary.spec
 
-mv "${RPMBUILD}/RPMS/noarch/"*.rpm .
-rm -rf "${RPMBUILD}"
+cp "${RPMBUILD}/RPMS/noarch/"*.rpm ${SCRIPT_DIR}/
+
+docker run  \
+    --workdir "/buildroot" \
+    --volume "/home/hendrik/projects/duplicati/BuildTools/Installer/fedora":"/buildroot":"rw" \
+    "duplicati/fedora-build:latest" \
+    rm -rf /buildroot/${DIRNAME}-rpmbuild

@@ -24,7 +24,7 @@ if [ -d "${SCRIPT_DIR}/${DIRNAME}" ]; then
 	rm -rf "${SCRIPT_DIR}/${DIRNAME}"
 fi
 
-unzip -d "${SCRIPT_DIR}/${DIRNAME}" "$1"
+unzip -q -d "${SCRIPT_DIR}/${DIRNAME}" "$ZIPFILE"
 
 for n in "../oem" "../../oem" "../../../oem"
 do

@@ -24,6 +24,21 @@ function build_installer_debian () {
 	echo "Done building deb package"
 }
 
+function build_installer_fedora () {
+	check_docker
+	RPMNAME="duplicati-${VERSION}-${BUILDTAG}.noarch.rpm"
+	echo "RPMName: ${RPMNAME}"
+	echo ""
+	echo ""
+	echo "Building Fedora RPM with Docker ..."
+
+	bash ../Installer/fedora/docker-build-binary.sh "${ZIPFILE}"
+
+	mv ../Installer/fedora/${RPMNAME} "${UPDATE_TARGET}"
+
+	echo "Done building rpm package"
+}
+
 function build_file_signatures() {
 	if [ "z${GPGID}" != "z" ]; then
 		echo "$GPGKEY" | "${GPG}" "--passphrase-fd" "0" "--batch" "--yes" "--default-key=${GPGID}" "--output" "$2.sig" "--detach-sig" "$1"
@@ -85,6 +100,9 @@ while true ; do
     --debian)
 		INSTALLERS="${INSTALLERS},debian"
         ;;
+	--fedora)
+		INSTALLERS="${INSTALLERS},fedora"
+		;;
     --help)
         show_help
         exit 0
@@ -127,7 +145,15 @@ VERSION=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 1)
 BUILDTYPE=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 2)
 BUILDTAG_RAW=$(echo "${RELEASE_FILE_NAME}" | cut -d "." -f 1-4 | cut -d "-" -f 2-4)
 BUILDTAG="${BUILDTAG_RAW//-}"
-build_installer_debian
+
+if [[ $INSTALLERS =~ "debian" ]]; then
+	build_installer_debian
+fi
+
+if [[ $INSTALLERS =~ "fedora" ]]; then
+	build_installer_fedora
+fi
+
 exit 0
 
 
@@ -140,7 +166,6 @@ MONO=/Library/Frameworks/Mono.framework/Commands/mono
 GPG=/usr/local/bin/gpg2
 
 
-RPMNAME="duplicati-${VERSION}-${BUILDTAG}.noarch.rpm"
 
 MSI64NAME="duplicati-${BUILDTAG_RAW}-x64.msi"
 MSI32NAME="duplicati-${BUILDTAG_RAW}-x86.msi"
@@ -155,7 +180,7 @@ echo "Filename: ${ZIPFILE}"
 echo "Version: ${VERSION}"
 echo "Buildtype: ${BUILDTYPE}"
 echo "Buildtag: ${BUILDTAG}"
-echo "RPMName: ${RPMNAME}"
+
 
 echo "SPKName: ${SPKNAME}"
 
@@ -191,19 +216,6 @@ cd Installer/Synology
 bash "make-binary-package.sh" "../../$1"
 mv "${SPKNAME}" "../../${UPDATE_TARGET}/"
 cd ../..
-
-
-echo ""
-echo ""
-echo "Building Fedora RPM with Docker ..."
-
-cd "Installer/fedora"
-bash "docker-build-binary.sh" "../../$1"
-cd "../.."
-
-mv "Installer/fedora/${RPMNAME}" "${UPDATE_TARGET}"
-
-echo "Done building rpm package"
 
 
 echo ""
