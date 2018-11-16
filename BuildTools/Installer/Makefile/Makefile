@@ -6,7 +6,7 @@ NUGET_TOOL=nuget
 NUGET_ARGS=restore
 
 OUTPUT_ARGS=/property:OutputPath=bin/Release
-SOURCE_DIR=../../.
+SOURCE_DIR=../../../.
 PACKAGE_DIR=./pkg
 PKG_TARGET=$(PACKAGE_DIR)/usr/lib/duplicati
 

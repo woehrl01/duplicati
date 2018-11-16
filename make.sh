@@ -1,2 +1,2 @@
-cd Installer/Makefile
+cd BuildTools/Installer/Makefile
 make $@
