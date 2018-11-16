@@ -9,12 +9,11 @@ set -eE
 trap 'quit_on_error $LINENO' ERR
 
 ZIPFILE=$1
-SCRIPT_DIR=$(dirname "$0")
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 FILENAME=$(basename $ZIPFILE)
 DIRNAME=$(echo "${FILENAME}" | cut -d "_" -f 1)
 VERSION=$(echo "${DIRNAME}" | cut -d "-" -f 2)
 DATE_STAMP=$(LANG=C date -R)
-
 
 if [ ! -f "$ZIPFILE" ]; then
 	echo "Please provide the filename of an existing zip build as the first argument"
@@ -56,12 +55,12 @@ docker build -t "duplicati/debian-build:latest" - < "${SCRIPT_DIR}/Dockerfile.bu
 
 # Weirdness with time not being synced in Docker instance
 sleep 5
-docker run  --workdir "/builddir/${DIRNAME}" --volume `pwd`:/builddir:rw "duplicati/debian-build:latest" dpkg-buildpackage
+docker run  --workdir "/builddir/${DIRNAME}" --volume ${SCRIPT_DIR}:/builddir:rw "duplicati/debian-build:latest" dpkg-buildpackage
+docker run  --workdir "/builddir/${DIRNAME}" --volume ${SCRIPT_DIR}:/builddir:rw "duplicati/debian-build:latest" rm -rf /builddir/${DIRNAME}
 
-rm -rf "${SCRIPT_DIR}/${DIRNAME}"
 for filename in "duplicati_${VERSION}-1_amd64.changes" "duplicati_${VERSION}-1.dsc"  "duplicati_${VERSION}-1.tar.gz"
 do
     if [ -f "${SCRIPT_DIR}/${filename}" ]; then
-        rm "${SCRIPT_DIR}/${filename}"
+        rm -f "${SCRIPT_DIR}/${filename}"
     fi
 done
