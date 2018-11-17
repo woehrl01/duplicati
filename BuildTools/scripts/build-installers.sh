@@ -17,9 +17,9 @@ function build_installer_debian () {
 	echo ""
 	echo "Building Debian deb with Docker ..."
 
-	bash ../Installer/debian/docker-build-binary.sh "${ZIPFILE}"
+	bash "${SCRIPT_DIR}/../Installer/debian/docker-build-binary.sh" "${ZIPFILE}"
 
-	mv ../Installer/debian/${DEBNAME} "${UPDATE_TARGET}"
+	mv "${SCRIPT_DIR}/../Installer/debian/${DEBNAME}" "${UPDATE_TARGET}"
 
 	echo "Done building deb package"
 }
@@ -32,11 +32,26 @@ function build_installer_fedora () {
 	echo ""
 	echo "Building Fedora RPM with Docker ..."
 
-	bash ../Installer/fedora/docker-build-binary.sh "${ZIPFILE}"
+	bash "${SCRIPT_DIR}/../Installer/fedora/docker-build-binary.sh" "${ZIPFILE}"
 
-	mv ../Installer/fedora/${RPMNAME} "${UPDATE_TARGET}"
+	mv "${SCRIPT_DIR}/../Installer/fedora/${RPMNAME}" "${UPDATE_TARGET}"
 
 	echo "Done building rpm package"
+}
+
+function build_installer_osx () {
+	DMGNAME="duplicati-${BUILDTAG_RAW}.dmg"
+	PKGNAME="duplicati-${BUILDTAG_RAW}.pkg"
+
+	echo ""
+	echo ""
+	echo "Building OSX package locally ..."
+	echo ""
+
+	bash "${SCRIPT_DIR}/../Installer/OSX/make-dmg.sh" "${ZIPFILE}"
+	mv "${SCRIPT_DIR}/../Installer/OSX/Duplicati.dmg" "../../${UPDATE_TARGET}/${DMGNAME}"
+	mv "${SCRIPT_DIR}/../Installer/OSX/Duplicati.pkg" "../../${UPDATE_TARGET}/${PKGNAME}"
+
 }
 
 function build_file_signatures() {
@@ -140,11 +155,16 @@ while true ; do
     shift
 done
 
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 RELEASE_FILE_NAME=$(basename "$ZIPFILE" .zip)
 VERSION=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 1)
 BUILDTYPE=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 2)
 BUILDTAG_RAW=$(echo "${RELEASE_FILE_NAME}" | cut -d "." -f 1-4 | cut -d "-" -f 2-4)
 BUILDTAG="${BUILDTAG_RAW//-}"
+
+build_installer_osx
+
+exit 0
 
 if [[ $INSTALLERS =~ "debian" ]]; then
 	build_installer_debian
@@ -156,7 +176,6 @@ fi
 
 exit 0
 
-
 GITHUB_TOKEN_FILE="${HOME}/.config/github-api-token"
 GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
 AUTHENTICODE_PFXFILE="${HOME}/.config/signkeys/Duplicati/authenticode.pfx"
@@ -165,12 +184,9 @@ MONO=/Library/Frameworks/Mono.framework/Commands/mono
 
 GPG=/usr/local/bin/gpg2
 
-
-
 MSI64NAME="duplicati-${BUILDTAG_RAW}-x64.msi"
 MSI32NAME="duplicati-${BUILDTAG_RAW}-x86.msi"
-DMGNAME="duplicati-${BUILDTAG_RAW}.dmg"
-PKGNAME="duplicati-${BUILDTAG_RAW}.pkg"
+
 SPKNAME="duplicati-${BUILDTAG_RAW}.spk"
 SIGNAME="duplicati-${BUILDTAG_RAW}-signatures.zip"
 
@@ -195,18 +211,6 @@ VBoxHeadless --startvm Duplicati-Win10-Build &
 
 
 # Then do the local build to mask the waiting a little more
-
-echo ""
-echo ""
-echo "Building OSX package locally ..."
-echo ""
-echo "Enter local sudo password..."
-
-cd "Installer/OSX"
-bash "make-dmg.sh" "../../$1"
-mv "Duplicati.dmg" "../../${UPDATE_TARGET}/${DMGNAME}"
-mv "Duplicati.pkg" "../../${UPDATE_TARGET}/${PKGNAME}"
-cd "../.."
 
 echo ""
 echo ""

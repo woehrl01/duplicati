@@ -40,7 +40,6 @@ function set_permissions () {
 }
 
 function start_test () {
-
     for CAT in $(echo $CATEGORIES | sed "s/,/ /g")
     do
         # prepare dirs
