@@ -39,6 +39,20 @@ function build_installer_fedora () {
 	echo "Done building rpm package"
 }
 
+
+function build_installer_synology () {
+	SPKNAME="duplicati-${BUILDTAG_RAW}.spk"
+	echo "SPKName: ${SPKNAME}"
+	echo ""
+	echo ""
+	echo "Building Synology package ..."
+
+	bash "${SCRIPT_DIR}/../Installer/Synology/make-binary-package.sh" "${ZIPFILE}"
+	mv "${SCRIPT_DIR}/../Installer/Synology/${SPKNAME}" "${UPDATE_TARGET}"
+	echo "Done building synology package"
+}
+
+
 function build_installer_osx () {
 	DMGNAME="duplicati-${BUILDTAG_RAW}.dmg"
 	PKGNAME="duplicati-${BUILDTAG_RAW}.pkg"
@@ -109,15 +123,14 @@ function check_docker () {
 
 UNSIGNED=false
 LOCAL=false
+INSTALLERS="debian,fedora,osx,synology"
 
 while true ; do
     case "$1" in
-    --debian)
-		INSTALLERS="${INSTALLERS},debian"
+    --installers)
+		INSTALLERS="$2"
+		shift
         ;;
-	--fedora)
-		INSTALLERS="${INSTALLERS},fedora"
-		;;
     --help)
         show_help
         exit 0
@@ -162,16 +175,20 @@ BUILDTYPE=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 2)
 BUILDTAG_RAW=$(echo "${RELEASE_FILE_NAME}" | cut -d "." -f 1-4 | cut -d "-" -f 2-4)
 BUILDTAG="${BUILDTAG_RAW//-}"
 
-build_installer_osx
-
-exit 0
-
 if [[ $INSTALLERS =~ "debian" ]]; then
 	build_installer_debian
 fi
 
 if [[ $INSTALLERS =~ "fedora" ]]; then
 	build_installer_fedora
+fi
+
+if [[ $INSTALLERS =~ "osx" ]]; then
+	build_installer_osx
+fi
+
+if [[ $INSTALLERS =~ "synology" ]]; then
+	build_installer_synology
 fi
 
 exit 0
@@ -187,7 +204,7 @@ GPG=/usr/local/bin/gpg2
 MSI64NAME="duplicati-${BUILDTAG_RAW}-x64.msi"
 MSI32NAME="duplicati-${BUILDTAG_RAW}-x86.msi"
 
-SPKNAME="duplicati-${BUILDTAG_RAW}.spk"
+
 SIGNAME="duplicati-${BUILDTAG_RAW}-signatures.zip"
 
 UPDATE_TARGET="Updates/build/${BUILDTYPE}_target-${VERSION}"
@@ -198,12 +215,9 @@ echo "Buildtype: ${BUILDTYPE}"
 echo "Buildtag: ${BUILDTAG}"
 
 
-echo "SPKName: ${SPKNAME}"
-
 if [ !$UNSIGNED ]; then
 	set_gpg_data
 fi
-
 
 # Pre-boot virtual machine
 echo "Booting Win10 build instance"
@@ -211,17 +225,6 @@ VBoxHeadless --startvm Duplicati-Win10-Build &
 
 
 # Then do the local build to mask the waiting a little more
-
-echo ""
-echo ""
-echo "Building Synology package locally ..."
-
-cd Installer/Synology
-bash "make-binary-package.sh" "../../$1"
-mv "${SPKNAME}" "../../${UPDATE_TARGET}/"
-cd ../..
-
-
 echo ""
 echo ""
 echo "Building Docker images ..."
@@ -331,7 +334,6 @@ cat >> "./tmp/latest-installers.json" <<EOF
 		"sha256": "${SHA256}"
 	},
 EOF
-
 }
 
 process_installer "${ZIPFILE}" "zip"
