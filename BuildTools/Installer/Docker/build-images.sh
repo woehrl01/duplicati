@@ -1,31 +1,39 @@
 #!/bin/bash
 
-if [ ! -f "$1" ]; then
-    echo "Please provide the filename of an existing zip build as the first argument"
-    exit
-fi
+quit_on_error() {
+    echo "Error on line $1, stopping build of installer(s)."
+    exit 1
+}
 
+set -eE
+trap 'quit_on_error $LINENO' ERR
+
+ZIPFILE=$1
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 ARCHITECTURES="amd64 arm32v7"
 DEFAULT_ARCHITECTURE=amd64
 DEFAULT_CHANNEL=beta
 REPOSITORY=duplicati/duplicati
 
-ARCHIVE_NAME=$(basename -s .zip $1)
+ARCHIVE_NAME=$(basename -s .zip ${ZIPFILE})
 VERSION=$(echo "${ARCHIVE_NAME}" | cut -d "-" -f 2-)
 CHANNEL=$(echo "${ARCHIVE_NAME}" | cut -d "_" -f 2)
-DIRNAME=duplicati
+DIRNAME="${SCRIPT_DIR}/duplicati"
 
-if [ -d "${DIRNAME}" ]; then
-    rm -rf "${DIRNAME}"
+if [ ! -f "$1" ]; then
+    echo "Please provide the filename of an existing zip build as the first argument"
+    exit
 fi
 
-unzip -d "${DIRNAME}" "$1"
+rm -rf "${DIRNAME}"
+
+unzip -qd "${DIRNAME}" "$1"
 
 for n in "../oem" "../../oem" "../../../oem"
 do
-    if [ -d $n ]; then
+    if [ -d "${SCRIPT_DIR}/$n" ]; then
         echo "Installing OEM files"
-        cp -R $n "${DIRNAME}/webroot/"
+        cp -R "${SCRIPT_DIR}/$n" "${DIRNAME}/webroot/"
     fi
 done
 
@@ -33,12 +41,13 @@ for n in "oem-app-name.txt" "oem-update-url.txt" "oem-update-key.txt" "oem-updat
 do
     for p in "../$n" "../../$n" "../../../$n"
     do
-        if [ -f $p ]; then
+        if [ -f "${SCRIPT_DIR}/$p" ]; then
             echo "Installing OEM override file"
-            cp $p "${DIRNAME}"
+            cp "${SCRIPT_DIR}/$p" "${DIRNAME}"
         fi
     done
 done
+
 
 for arch in ${ARCHITECTURES}; do
     tags="linux-${arch}-${VERSION} linux-${arch}-${CHANNEL}"
@@ -62,12 +71,8 @@ for arch in ${ARCHITECTURES}; do
         --build-arg ARCH=${arch}/ \
         --build-arg VERSION=${VERSION} \
         --build-arg CHANNEL=${CHANNEL} \
-        --file context/Dockerfile \
+        --file "${SCRIPT_DIR}"/context/Dockerfile \
         .
-
-    for tag in ${tags}; do
-        docker push ${REPOSITORY}:${tag}
-    done
 done
 
 rm -rf "${DIRNAME}"

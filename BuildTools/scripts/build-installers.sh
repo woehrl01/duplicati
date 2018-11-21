@@ -65,7 +65,17 @@ function build_installer_osx () {
 	bash "${SCRIPT_DIR}/../Installer/OSX/make-dmg.sh" "${ZIPFILE}"
 	mv "${SCRIPT_DIR}/../Installer/OSX/Duplicati.dmg" "../../${UPDATE_TARGET}/${DMGNAME}"
 	mv "${SCRIPT_DIR}/../Installer/OSX/Duplicati.pkg" "../../${UPDATE_TARGET}/${PKGNAME}"
+	echo "Done building osx package"
+}
 
+function build_installer_docker () {
+	echo ""
+	echo ""
+	echo "Building Docker images ..."
+
+	bash "${SCRIPT_DIR}/../Installer/Docker/build-images.sh" "${ZIPFILE}"
+
+	echo "Done building Docker images"
 }
 
 function build_file_signatures() {
@@ -78,6 +88,50 @@ function build_file_signatures() {
 	shasum -a 1 "$1" | awk -F ' ' '{print $1}' > "$2.sha1"
 	shasum -a 256 "$1" | awk -F ' ' '{print $1}'  > "$2.sha256"
 }
+
+
+function build_windows_installer () {
+	# Pre-boot virtual machine
+	echo "Booting Win10 build instance"
+	VBoxHeadless --startvm Duplicati-Win10-Build &
+
+
+
+	echo ""
+	echo ""
+	echo "Building Windows instance in virtual machine"
+
+	while true
+	do
+		ssh -o ConnectTimeout=5 IEUser@192.168.56.101 "dir"
+		if [ $? -eq 255 ]; then
+			echo "Windows Build machine is not responding, try restarting it"
+			read -p "Press [Enter] key to try again"
+			continue
+		fi
+		break
+	done
+
+	MSI64NAME="duplicati-${BUILDTAG_RAW}-x64.msi"
+	MSI32NAME="duplicati-${BUILDTAG_RAW}-x86.msi"
+
+cat > "tmp-windows-commands.bat" <<EOF
+SET VS120COMNTOOLS=%VS140COMNTOOLS%
+cd \\Duplicati\\Installer\\Windows
+build-msi.bat "../../$1"
+EOF
+
+	ssh IEUser@192.168.56.101 "\\Duplicati\\tmp-windows-commands.bat"
+	ssh IEUser@192.168.56.101 "shutdown /s /t 0"
+
+	rm "tmp-windows-commands.bat"
+
+	mv "./Installer/Windows/Duplicati.msi" "${UPDATE_TARGET}/${MSI64NAME}"
+	mv "./Installer/Windows/Duplicati-32bit.msi" "${UPDATE_TARGET}/${MSI32NAME}"
+
+	VBoxManage controlvm "Duplicati-Win10-Build" poweroff
+}
+
 
 function set_gpg_data () {
 	if [ -f "${GPG_KEYFILE}" ]; then
@@ -123,7 +177,7 @@ function check_docker () {
 
 UNSIGNED=false
 LOCAL=false
-INSTALLERS="debian,fedora,osx,synology"
+INSTALLERS="debian,fedora,osx,synology,docker,windows"
 
 while true ; do
     case "$1" in
@@ -191,79 +245,38 @@ if [[ $INSTALLERS =~ "synology" ]]; then
 	build_installer_synology
 fi
 
+
+if [[ $INSTALLERS =~ "docker" ]]; then
+	build_installer_docker
+fi
+
+if [[ $INSTALLERS =~ "windows" ]]; then
+	build_installer_windows
+fi
+
 exit 0
 
-GITHUB_TOKEN_FILE="${HOME}/.config/github-api-token"
 GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
 AUTHENTICODE_PFXFILE="${HOME}/.config/signkeys/Duplicati/authenticode.pfx"
 AUTHENTICODE_PASSWORD="${HOME}/.config/signkeys/Duplicati/authenticode.key"
 MONO=/Library/Frameworks/Mono.framework/Commands/mono
-
 GPG=/usr/local/bin/gpg2
 
-MSI64NAME="duplicati-${BUILDTAG_RAW}-x64.msi"
-MSI32NAME="duplicati-${BUILDTAG_RAW}-x86.msi"
 
 
 SIGNAME="duplicati-${BUILDTAG_RAW}-signatures.zip"
 
-UPDATE_TARGET="Updates/build/${BUILDTYPE}_target-${VERSION}"
+#UPDATE_TARGET="Updates/build/${BUILDTYPE}_target-${VERSION}"
 
 echo "Filename: ${ZIPFILE}"
 echo "Version: ${VERSION}"
 echo "Buildtype: ${BUILDTYPE}"
 echo "Buildtag: ${BUILDTAG}"
 
-
 if [ !$UNSIGNED ]; then
 	set_gpg_data
 fi
 
-# Pre-boot virtual machine
-echo "Booting Win10 build instance"
-VBoxHeadless --startvm Duplicati-Win10-Build &
-
-
-# Then do the local build to mask the waiting a little more
-echo ""
-echo ""
-echo "Building Docker images ..."
-
-cd Installer/Docker
-bash build-images.sh ../../$1
-cd ../..
-
-echo "Done building Docker images"
-
-
-echo ""
-echo ""
-echo "Building Windows instance in virtual machine"
-
-while true
-do
-    ssh -o ConnectTimeout=5 IEUser@192.168.56.101 "dir"
-    if [ $? -eq 255 ]; then
-    	echo "Windows Build machine is not responding, try restarting it"
-        read -p "Press [Enter] key to try again"
-        continue
-    fi
-    break
-done
-
-cat > "tmp-windows-commands.bat" <<EOF
-SET VS120COMNTOOLS=%VS140COMNTOOLS%
-cd \\Duplicati\\Installer\\Windows
-build-msi.bat "../../$1"
-EOF
-
-ssh IEUser@192.168.56.101 "\\Duplicati\\tmp-windows-commands.bat"
-ssh IEUser@192.168.56.101 "shutdown /s /t 0"
-
-rm "tmp-windows-commands.bat"
-
-mv "./Installer/Windows/Duplicati.msi" "${UPDATE_TARGET}/${MSI64NAME}"
-mv "./Installer/Windows/Duplicati-32bit.msi" "${UPDATE_TARGET}/${MSI32NAME}"
 
 if [ -f "${AUTHENTICODE_PFXFILE}" ] && [ -f "${AUTHENTICODE_PASSWORD}" ]; then
 	echo "Performing authenticode signing of installers"
@@ -304,62 +317,6 @@ else
 	echo "Skipped authenticode signing as files are missing"
 fi
 
-echo ""
-echo ""
-echo "Done building, uploading installers ..."
-
-if [ -d "./tmp" ]; then
-	rm -rf "./tmp"
-fi
-
-mkdir "./tmp"
-
-echo "{" > "./tmp/latest-installers.json"
-
-process_installer() {
-	if [ "$2" != "zip" ]; then
-		aws --profile=duplicati-upload s3 cp "${UPDATE_TARGET}/$1" "s3://updates.duplicati.com/${BUILDTYPE}/$1"
-	fi
-
-	local MD5=$(md5 ${UPDATE_TARGET}/$1 | awk -F ' ' '{print $NF}')
-	local SHA1=$(shasum -a 1 ${UPDATE_TARGET}/$1 | awk -F ' ' '{print $1}')
-	local SHA256=$(shasum -a 256 ${UPDATE_TARGET}/$1 | awk -F ' ' '{print $1}')
-
-cat >> "./tmp/latest-installers.json" <<EOF
-	"$2": {
-		"name": "$1",
-		"url": "https://updates.duplicati.com/${BUILDTYPE}/$1",
-		"md5": "${MD5}",
-		"sha1": "${SHA1}",
-		"sha256": "${SHA256}"
-	},
-EOF
-}
-
-process_installer "${ZIPFILE}" "zip"
-process_installer "${SPKNAME}" "spk"
-process_installer "${RPMNAME}" "rpm"
-process_installer "${DEBNAME}" "deb"
-process_installer "${DMGNAME}" "dmg"
-process_installer "${PKGNAME}" "pkg"
-process_installer "${MSI32NAME}" "msi86"
-process_installer "${MSI64NAME}" "msi64"
-
-cat >> "./tmp/latest-installers.json" <<EOF
-	"version": "${VERSION}"
-}
-EOF
-
-echo "duplicati_installers =" > "./tmp/latest-installers.js"
-cat "./tmp/latest-installers.json" >> "./tmp/latest-installers.js"
-echo ";" >> "./tmp/latest-installers.js"
-
-aws --profile=duplicati-upload s3 cp "./tmp/latest-installers.json" "s3://updates.duplicati.com/${BUILDTYPE}/latest-installers.json"
-aws --profile=duplicati-upload s3 cp "./tmp/latest-installers.js" "s3://updates.duplicati.com/${BUILDTYPE}/latest-installers.js"
-
-if [ -d "./tmp" ]; then
-	rm -rf "./tmp"
-fi
 
 SIG_FOLDER="duplicati-${BUILDTAG_RAW}-signatures"
 mkdir tmp
@@ -411,6 +368,5 @@ else
     echo "Skipping CDN update"
 fi
 
-VBoxManage controlvm "Duplicati-Win10-Build" poweroff
 
 
