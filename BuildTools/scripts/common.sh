@@ -37,3 +37,27 @@ function sign_with_authenticode () {
 		NEST="-nest"
 	done
 }
+
+install_oem_files () {
+    SOURCE_DIR=$1
+    TARGET_DIR=$2
+    for n in "../oem" "../../oem" "../../../oem"
+    do
+        if [ -d "${SOURCE_DIR}/$n" ]; then
+            echo "Installing OEM files"
+            cp -R "${SOURCE_DIR}/$n" "${TARGET_DIR}/webroot/"
+        fi
+    done
+
+    for n in "oem-app-name.txt" "oem-update-url.txt" "oem-update-key.txt" "oem-update-readme.txt" "oem-update-installid.txt"
+    do
+        for p in "../$n" "../../$n" "../../../$n"
+        do
+            if [ -f "${SOURCE_DIR}/$p" ]; then
+                echo "Installing OEM override file"
+                cp "${SOURCE_DIR}/$p" "${TARGET_DIR}"
+            fi
+        done
+    done
+}
+

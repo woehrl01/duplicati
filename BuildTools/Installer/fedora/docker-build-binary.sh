@@ -17,6 +17,7 @@ BUILDDATE=$(date +%Y%m%d)
 BUILDTAG_RAW=$(echo "${FILENAME}" | cut -d "." -f 1-4 | cut -d "-" -f 2-4)
 BUILDTAG="${BUILDTAG_RAW//-}"
 
+
 if [ ! -f "$1" ]; then
 	echo "Please provide the filename of an existing zip build as the first argument"
 	exit
@@ -37,24 +38,8 @@ cp ${SCRIPT_DIR}/../debian/*-launcher.sh "${SCRIPT_DIR}/${DIRNAME}"
 cp ${SCRIPT_DIR}/../debian/duplicati.png "${SCRIPT_DIR}/${DIRNAME}"
 cp ${SCRIPT_DIR}/../debian/duplicati.desktop "${SCRIPT_DIR}/${DIRNAME}"
 
-for n in "../oem" "../../oem" "../../../oem"
-do
-    if [ -d "${SCRIPT_DIR}/$n" ]; then
-        echo "Installing OEM files"
-        cp -R "${SCRIPT_DIR}/$n" "${SCRIPT_DIR}/${DIRNAME}/webroot/"
-    fi
-done
-
-for n in "oem-app-name.txt" "oem-update-url.txt" "oem-update-key.txt" "oem-update-readme.txt" "oem-update-installid.txt"
-do
-    for p in "../$n" "../../$n" "../../../$n"
-    do
-        if [ -f "${SCRIPT_DIR}/$p" ]; then
-            echo "Installing OEM override file"
-            cp "${SCRIPT_DIR}/$p" "${SCRIPT_DIR}/${DIRNAME}"
-        fi
-    done
-done
+. "${SCRIPT_DIR}/../../scripts/common.sh"
+install_oem_files "${SCRIPT_DIR}" "${SCRIPT_DIR}/${DIRNAME}"
 
 tar -cjf "${SCRIPT_DIR}/${DIRNAME}.tar.bz2" -C ${SCRIPT_DIR} "${DIRNAME}"
 rm -rf "${SCRIPT_DIR}/${DIRNAME}"

@@ -26,24 +26,8 @@ fi
 
 unzip -q -d "${SCRIPT_DIR}/${DIRNAME}" "$ZIPFILE"
 
-for n in "../oem" "../../oem" "../../../oem"
-do
-    if [ -d "${SCRIPT_DIR}/$n" ]; then
-        echo "Installing OEM files"
-        cp -R "${SCRIPT_DIR}/$n" "${SCRIPT_DIR}/${DIRNAME}/webroot/"
-    fi
-done
-
-for n in "oem-app-name.txt" "oem-update-url.txt" "oem-update-key.txt" "oem-update-readme.txt" "oem-update-installid.txt"
-do
-    for p in "../$n" "../../$n" "../../../$n"
-    do
-        if [ -f "${SCRIPT_DIR}/$p" ]; then
-            echo "Installing OEM override file"
-            cp "${SCRIPT_DIR}/$p" "${SCRIPT_DIR}/${DIRNAME}"
-        fi
-    done
-done
+. "${SCRIPT_DIR}/../../scripts/common.sh"
+install_oem_files "${SCRIPT_DIR}" "${SCRIPT_DIR}/${DIRNAME}"
 
 cp -R "${SCRIPT_DIR}/debian" "${SCRIPT_DIR}/${DIRNAME}"
 cp "${SCRIPT_DIR}/bin-rules.sh" "${SCRIPT_DIR}/${DIRNAME}/debian/rules"
