@@ -36,6 +36,7 @@ EOF
 	process_installer "${PKGNAME}" "pkg"
 	process_installer "${MSI32NAME}" "msi86"
 	process_installer "${MSI64NAME}" "msi64"
+aws --profile=duplicati-upload s3 cp "${ZIP_FILE_WITH_SIGNATURES}" "s3://updates.duplicati.com/${BUILDTYPE}/${ZIP_FILE_WITH_SIGNATURES}"
 
 cat >> "./tmp/latest-installers.json" <<EOF
 	"version": "${VERSION}"
@@ -145,10 +146,18 @@ function release_to_github () {
 			--user "duplicati" \
 			--security-token "${GITHUB_TOKEN}" \
 			--file "${UPDATE_TARGET}/${RELEASE_FILE_NAME}.zip"
+
+        for FILE in $(ls ${INSTALLERS_TARGET_FOLDER}); do
+            github-release upload \
+                --tag "v${VERSION}-${BUILDTAG_RAW}"  \
+                --name "${FILE}" \
+                --repo "duplicati" \
+                --user "duplicati" \
+                --security-token "${GITHUB_TOKEN}" \
+                --file "${UPDATE_TARGET}/${FILE}"
+	done
 	fi
 }
-
-
 
 function deploy_docker () {
 	ARCHITECTURES="amd64 arm32v7"
@@ -161,5 +170,11 @@ function deploy_docker () {
 	done
 }
 
+# TODO: UNCOMMENT AND FIX THIS IF REQUIRED
+# if [ -f ~/.config/duplicati-mirror-sync.sh ]; then
+#     bash ~/.config/duplicati-mirror-sync.sh
+# else
+#     echo "Skipping CDN update"
+# fi
 
-GITHUB_TOKEN_FILE="${HOME}/.config/github-api-token"
+

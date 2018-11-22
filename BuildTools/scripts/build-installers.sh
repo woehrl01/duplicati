@@ -78,24 +78,12 @@ function build_installer_docker () {
 	echo "Done building Docker images"
 }
 
-function build_file_signatures() {
-	if [ "z${GPGID}" != "z" ]; then
-		echo "$GPGKEY" | "${GPG}" "--passphrase-fd" "0" "--batch" "--yes" "--default-key=${GPGID}" "--output" "$2.sig" "--detach-sig" "$1"
-		echo "$GPGKEY" | "${GPG}" "--passphrase-fd" "0" "--batch" "--yes" "--default-key=${GPGID}" "--armor" "--output" "$2.sig.asc" "--detach-sig" "$1"
-	fi
-
-	md5 "$1" | awk -F ' ' '{print $NF}' > "$2.md5"
-	shasum -a 1 "$1" | awk -F ' ' '{print $1}' > "$2.sha1"
-	shasum -a 256 "$1" | awk -F ' ' '{print $1}'  > "$2.sha256"
-}
 
 
 function build_windows_installer () {
 	# Pre-boot virtual machine
 	echo "Booting Win10 build instance"
 	VBoxHeadless --startvm Duplicati-Win10-Build &
-
-
 
 	echo ""
 	echo ""
@@ -132,6 +120,38 @@ EOF
 	VBoxManage controlvm "Duplicati-Win10-Build" poweroff
 }
 
+
+function build_file_signatures() {
+	if [ "z${GPGID}" != "z" ]; then
+		echo "$GPGKEY" | "${GPG}" "--passphrase-fd" "0" "--batch" "--yes" "--default-key=${GPGID}" "--output" "$2.sig" "--detach-sig" "$1"
+		echo "$GPGKEY" | "${GPG}" "--passphrase-fd" "0" "--batch" "--yes" "--default-key=${GPGID}" "--armor" "--output" "$2.sig.asc" "--detach-sig" "$1"
+	fi
+
+	md5 "$1" | awk -F ' ' '{print $NF}' > "$2.md5"
+	shasum -a 1 "$1" | awk -F ' ' '{print $1}' > "$2.sha1"
+	shasum -a 256 "$1" | awk -F ' ' '{print $1}'  > "$2.sha256"
+}
+
+function sign_with_gpg () {
+	ZIP_FILE_WITH_SIGNATURES="${UPDATE_TARGET}/duplicati-${BUILDTAG_RAW}-signatures.zip"
+	SIG_FOLDER="duplicati-${BUILDTAG_RAW}-signatures"
+	mkdir -p "./tmp/${SIG_FOLDER}"
+
+	for FILE in $(ls ${UPDATE_TARGET}); do
+		build_file_signatures "${FILE}" "./tmp/${SIG_FOLDER}/${FILE}"
+	done
+
+	if [ "z${GPGID}" != "z" ]; then
+		echo "${GPGID}" > "./tmp/${SIG_FOLDER}/sign-key.txt"
+		echo "https://pgp.mit.edu/pks/lookup?op=get&search=${GPGID}" >> "./tmp/${SIG_FOLDER}/sign-key.txt"
+	fi
+
+	rm -f "${UPDATE_TARGET}/${ZIP_FILE_WITH_SIGNATURES}"
+
+	zip -r9 "${ZIP_FILE_WITH_SIGNATURES}" "./tmp/${SIG_FOLDER}/"
+
+	rm -rf "./tmp"
+}
 
 function set_gpg_data () {
 	if [ -f "${GPG_KEYFILE}" ]; then
@@ -210,12 +230,6 @@ while true ; do
 			echo "Please supply the path to an existing zip binary as the first argument"
 			exit 1
 		fi
-
-		# if [ ! -f "$2" ]
-		# then
-		# 	echo "Please supply the format as the second argument"
-		# 	exit 1
-		# fi
 		break
         ;;
     esac
@@ -228,6 +242,16 @@ VERSION=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 1)
 BUILDTYPE=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 2)
 BUILDTAG_RAW=$(echo "${RELEASE_FILE_NAME}" | cut -d "." -f 1-4 | cut -d "-" -f 2-4)
 BUILDTAG="${BUILDTAG_RAW//-}"
+MONO=`which mono || /Library/Frameworks/Mono.framework/Commands/mono`
+
+echo "Building installers for: $INSTALLERS"
+echo "Filename: ${ZIPFILE}"
+echo "Version: ${VERSION}"
+echo "Buildtype: ${BUILDTYPE}"
+echo "Buildtag: ${BUILDTAG}"
+
+
+. ${SCRIPT_DIR}/common.sh
 
 if [[ $INSTALLERS =~ "debian" ]]; then
 	build_installer_debian
@@ -245,7 +269,6 @@ if [[ $INSTALLERS =~ "synology" ]]; then
 	build_installer_synology
 fi
 
-
 if [[ $INSTALLERS =~ "docker" ]]; then
 	build_installer_docker
 fi
@@ -254,119 +277,19 @@ if [[ $INSTALLERS =~ "windows" ]]; then
 	build_installer_windows
 fi
 
-exit 0
+if [ !$UNSIGNED ]; then
+	GPG=/usr/local/bin/gpg2
+	set_gpg_data
 
-GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
-AUTHENTICODE_PFXFILE="${HOME}/.config/signkeys/Duplicati/authenticode.pfx"
-AUTHENTICODE_PASSWORD="${HOME}/.config/signkeys/Duplicati/authenticode.key"
-MONO=/Library/Frameworks/Mono.framework/Commands/mono
-GPG=/usr/local/bin/gpg2
+	# SIGNING CONFIG
+	GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
+	AUTHENTICODE_PFXFILE="${HOME}/.config/signkeys/Duplicati/authenticode.pfx"
+	AUTHENTICODE_PASSWORD="${HOME}/.config/signkeys/Duplicati/authenticode.key"
 
+	sign_with_gpg
 
-
-SIGNAME="duplicati-${BUILDTAG_RAW}-signatures.zip"
+	sign_with_authenticode "${UPDATE_TARGET}/${MSI64NAME}"
+	sign_with_authenticode "${UPDATE_TARGET}/${MSI32NAME}"
+fi
 
 #UPDATE_TARGET="Updates/build/${BUILDTYPE}_target-${VERSION}"
-
-echo "Filename: ${ZIPFILE}"
-echo "Version: ${VERSION}"
-echo "Buildtype: ${BUILDTYPE}"
-echo "Buildtag: ${BUILDTAG}"
-
-if [ !$UNSIGNED ]; then
-	set_gpg_data
-fi
-
-
-if [ -f "${AUTHENTICODE_PFXFILE}" ] && [ -f "${AUTHENTICODE_PASSWORD}" ]; then
-	echo "Performing authenticode signing of installers"
-
-	if [ "z${KEYFILE_PASSWORD}" == "z" ]; then
-		echo -n "Enter keyfile password: "
-		read -s KEYFILE_PASSWORD
-		echo
-	fi
-
-	authenticode_sign() {
-		NEST=""
-		for hashalg in sha1 sha256; do
-			SIGN_MSG=$(osslsigncode sign -pkcs12 "${AUTHENTICODE_PFXFILE}" -pass "${PFX_PASS}" -n "Duplicati" -i "http://www.duplicati.com" -h "${hashalg}" ${NEST} -t "http://timestamp.verisign.com/scripts/timstamp.dll" -in "$1" -out tmpfile)
-			if [ "${SIGN_MSG}" != "Succeeded" ]; then echo "${SIGN_MSG}"; fi
-			mv tmpfile "$1"
-			NEST="-nest"
-		done
-	}
-
-	PFX_PASS=$("${MONO}" "BuildTools/AutoUpdateBuilder/bin/Debug/SharpAESCrypt.exe" d "${KEYFILE_PASSWORD}" "${AUTHENTICODE_PASSWORD}")
-
-	DECRYPT_STATUS=$?
-	if [ "${DECRYPT_STATUS}" -ne 0 ]; then
-	    echo "Failed to decrypt, SharpAESCrypt gave status ${DECRYPT_STATUS}, exiting"
-	    exit 4
-	fi
-
-	if [ "x${PFX_PASS}" == "x" ]; then
-	    echo "Failed to decrypt, SharpAESCrypt gave empty password, exiting"
-	    exit 4
-	fi
-
-	authenticode_sign "${UPDATE_TARGET}/${MSI64NAME}"
-	authenticode_sign "${UPDATE_TARGET}/${MSI32NAME}"
-
-else
-	echo "Skipped authenticode signing as files are missing"
-fi
-
-
-SIG_FOLDER="duplicati-${BUILDTAG_RAW}-signatures"
-mkdir tmp
-mkdir "./tmp/${SIG_FOLDER}"
-
-for FILE in "${SPKNAME}" "${RPMNAME}" "${DEBNAME}" "${DMGNAME}" "${PKGNAME}" "${MSI32NAME}" "${MSI64NAME}" "${ZIPFILE}"; do
-	build_file_signatures "${UPDATE_TARGET}/${FILE}" "./tmp/${SIG_FOLDER}/${FILE}"
-done
-
-if [ "z${GPGID}" != "z" ]; then
-	echo "${GPGID}" > "./tmp/${SIG_FOLDER}/sign-key.txt"
-	echo "https://pgp.mit.edu/pks/lookup?op=get&search=${GPGID}" >> "./tmp/${SIG_FOLDER}/sign-key.txt"
-fi
-
-if [ -f "${UPDATE_TARGET}/${SIGNAME}" ]; then
-	rm "${UPDATE_TARGET}/${SIGNAME}"
-fi
-
-cd tmp
-zip -r9 "./${SIGNAME}" "./${SIG_FOLDER}/"
-cd ..
-
-mv "./tmp/${SIGNAME}" "${UPDATE_TARGET}/${SIGNAME}"
-rm -rf "./tmp/${SIG_FOLDER}"
-
-aws --profile=duplicati-upload s3 cp "${UPDATE_TARGET}/${SIGNAME}" "s3://updates.duplicati.com/${BUILDTYPE}/${SIGNAME}"
-
-GITHUB_TOKEN=$(cat "${GITHUB_TOKEN_FILE}")
-
-if [ "x${GITHUB_TOKEN}" == "x" ]; then
-	echo "No GITHUB_TOKEN found in environment, you can manually upload the binaries"
-else
-	for FILE in "${SPKNAME}" "${RPMNAME}" "${DEBNAME}" "${DMGNAME}" "${PKGNAME}" "${MSI32NAME}" "${MSI64NAME}" "${SIGNAME}"; do
-		github-release upload \
-		    --tag "v${VERSION}-${BUILDTAG_RAW}"  \
-		    --name "${FILE}" \
-		    --repo "duplicati" \
-		    --user "duplicati" \
-		    --security-token "${GITHUB_TOKEN}" \
-		    --file "${UPDATE_TARGET}/${FILE}"
-	done
-fi
-
-rm -rf "./tmp"
-
-if [ -f ~/.config/duplicati-mirror-sync.sh ]; then
-    bash ~/.config/duplicati-mirror-sync.sh
-else
-    echo "Skipping CDN update"
-fi
-
-
-
