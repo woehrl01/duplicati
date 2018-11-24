@@ -178,3 +178,8 @@ function deploy_docker () {
 # fi
 
 
+echo "+ updating git repo" && update_git_repo
+echo "+ uploading to AWS" && upload_binaries_to_aws
+echo "+ releasing to github" && release_to_github
+echo "+ posting to forum" && post_to_forum
+

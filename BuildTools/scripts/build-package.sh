@@ -1,33 +1,12 @@
-quit_on_error() {
-  local parent_lineno="$1"
-  local message="$2"
-  local code="${3:-1}"
-  if [[ -n "$message" ]] ; then
-    echo "Error on or near line ${parent_lineno}: ${message}; exiting with status ${code}"
-  else
-    echo "Error on or near line ${parent_lineno}; exiting with status ${code}"
-  fi
 
-  eval reset_version $REDIRECT
-  exit "${code}"
-}
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
+. "${SCRIPT_DIR}/common.sh"
 
 set -eE
 trap 'quit_on_error $LINENO' ERR
 
 function reset_version () {
 	"${MONO}" "BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="2.0.0.7"
-}
-
-function set_keyfile_password () {
-	echo -n "Enter keyfile password: "
-	read -s KEYFILE_PASSWORD
-	echo
-
-	if [ "z${KEYFILE_PASSWORD}" == "z" ]; then
-		echo "No password entered, quitting"
-		exit 0
-	fi
 }
 
 function generate_package () {
@@ -127,9 +106,8 @@ function clean_and_build () {
 	"${XBUILD}" /p:DefineConstants=__MonoCS__ /p:DefineConstants=ENABLE_GTK /p:Configuration=Release "Duplicati.sln"
 }
 
-function update_text_files_with_new_version() {
-	UPDATE_MANIFEST_URLS="https://updates.duplicati.com/${RELEASE_TYPE}/latest.manifest;https://alt.updates.duplicati.com/${RELEASE_TYPE}/latest.manifest"
-
+function update_text_files() {
+	RELEASE_CHANGELOG_NEWS_FILE="changelog-news.txt" # never in repo due to .gitignore
 
 	if [[ ! -f "${RELEASE_CHANGELOG_NEWS_FILE}" ]]; then
 		echo "No updates to add to changelog found"
@@ -139,7 +117,6 @@ function update_text_files_with_new_version() {
 		exit 0
 	fi
 
-	RELEASE_CHANGELOG_NEWS_FILE="changelog-news.txt" # never in repo due to .gitignore
 	RELEASE_CHANGEINFO_NEWS=$(cat "${RELEASE_CHANGELOG_NEWS_FILE}" 2>/dev/null)
 	if [ ! "x${RELEASE_CHANGEINFO_NEWS}" == "x" ]; then
 
@@ -155,6 +132,7 @@ function update_text_files_with_new_version() {
 
 	echo "${RELEASE_NAME}" > "Duplicati/License/VersionTag.txt"
 	echo "${RELEASE_TYPE}" > "Duplicati/Library/AutoUpdater/AutoUpdateBuildChannel.txt"
+	UPDATE_MANIFEST_URLS="https://updates.duplicati.com/${RELEASE_TYPE}/latest.manifest;https://alt.updates.duplicati.com/${RELEASE_TYPE}/latest.manifest"
 	echo "${UPDATE_MANIFEST_URLS}" > "Duplicati/Library/AutoUpdater/AutoUpdateURL.txt"
 	cp "Updates/release_key.txt"  "Duplicati/Library/AutoUpdater/AutoUpdateSignKey.txt"
 
@@ -190,6 +168,10 @@ while true ; do
 	--unsigned)
 		SIGNED=false
 		;;
+	--version)
+		RELEASE_VERSION="$2"
+		shift
+		;;
     --* | -* )
         echo "unknown option $1, please use --help."
         exit 1
@@ -207,34 +189,34 @@ while true ; do
     shift
 done
 
-BUILD_DIR=$(dirname "$0")/../..
-cd $BUILD_DIR
-
-. ${SCRIPT_DIR}/common.sh
-
+# Validations
+if [[ -e "$RELEASE_VERSION" ]]; then
+	echo 'no version specified, exiting'
+	exit 1
+fi
 
 RELEASE_TIMESTAMP=$(date +%Y-%m-%d)
-RELEASE_INC_VERSION=$(cat Updates/build_version.txt)
-RELEASE_INC_VERSION=$((RELEASE_INC_VERSION+1))
-RELEASE_VERSION="2.0.4.${RELEASE_INC_VERSION}"
 RELEASE_NAME="${RELEASE_VERSION}_${RELEASE_TYPE}_${RELEASE_TIMESTAMP}"
 RELEASE_CHANGELOG_FILE="changelog.txt"
 RELEASE_FILE_NAME="duplicati-${RELEASE_NAME}"
 
-$LOCAL || update_text_files_with_new_version
+echo "+ updating changelog and version text files"
+$LOCAL || update_text_files
 
-echo "+ compiling binaries" && eval clean_and_build $REDIRECT
+echo "+ compiling binaries"
+eval clean_and_build $REDIRECT
 
-echo "+ copying binaries for packaging" && prepare_update_source_folder
+echo "+ copying binaries for packaging"
+prepare_update_source_folder
 
 # Remove all .DS_Store and Thumbs.db files
 find  . -type f -name ".DS_Store" | xargs rm -rf && find  . -type f -name "Thumbs.db" | xargs rm -rf
 
-$SIGNED && echo "+ getting key to sign" && set_keyfile_password
-
 if $SIGNED
 then
 	echo "+ signing with authenticode"
+	get_keyfile_password
+
 	for exec in "${UPDATE_SOURCE}/Duplicati."*.exe; do
 		sign_with_authenticode "${exec}"
 	done
@@ -243,18 +225,11 @@ then
 	done
 fi
 
-echo "generating package zipfile" && eval generate_package $REDIRECT
-
+echo "generating package zipfile"
+eval generate_package $REDIRECT
 eval reset_version $REDIRECT
 
 echo
 echo "Built ${RELEASE_TYPE} version: ${RELEASE_VERSION} - ${RELEASE_NAME}"
 echo "    in folder: ${UPDATE_TARGET}"
 echo
-
-if $LOCAL
-then
-  	exit 0
-fi
-
-return

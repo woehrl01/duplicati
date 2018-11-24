@@ -1,3 +1,35 @@
+#!/bin/bash
+
+function get_keyfile_password () {
+	if [ "z${KEYFILE_PASSWORD}" == "z" ]; then
+		echo -n "Enter keyfile password: "
+		read -s KEYFILE_PASSWORD
+		echo
+
+        if [ "z${KEYFILE_PASSWORD}" == "z" ]; then
+            echo "No password entered, quitting"
+            exit 0
+        fi
+
+        export KEYFILE_PASSWORD
+	fi
+}
+
+function quit_on_error() {
+  local parent_lineno="$1"
+  local message="$2"
+  local code="${3:-1}"
+  if [[ -n "$message" ]] ; then
+    echo "Error on or near line ${parent_lineno}: ${message}; exiting with status ${code}"
+  else
+    echo "Error on or near line ${parent_lineno}; exiting with status ${code}"
+  fi
+
+  eval reset_version $REDIRECT
+  exit "${code}"
+}
+
+
 
 function sign_with_authenticode () {
 	if [ ! -f "${AUTHENTICODE_PFXFILE}" ] || [ ! -f "${AUTHENTICODE_PASSWORD}" ]; then
@@ -7,12 +39,7 @@ function sign_with_authenticode () {
 
 	echo "Performing authenticode signing of installers"
 
-	if [ "z${KEYFILE_PASSWORD}" == "z" ]; then
-		echo -n "Enter keyfile password: "
-		read -s KEYFILE_PASSWORD
-		echo
-	fi
-
+    get_keyfile_password
 
 	if [ "z${PFX_PASS}" == "z" ]; then
         PFX_PASS=$("${MONO}" "BuildTools/AutoUpdateBuilder/bin/Debug/SharpAESCrypt.exe" d "${KEYFILE_PASSWORD}" "${AUTHENTICODE_PASSWORD}")

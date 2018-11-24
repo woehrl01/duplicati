@@ -11,36 +11,39 @@ function update_git_repo () {
 	git push --tags
 }
 
-
-
 function increase_release_number () {
     echo "${RELEASE_INC_VERSION}" > "Updates/build_version.txt"
 }
 
 
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
+. "${SCRIPT_DIR}/common.sh"
+get_keyfile_password
 
-$LOCAL || git stash save "auto-build-${RELEASE_TIMESTAMP}"
+RELEASE_INC_VERSION=$(cat Updates/build_version.txt)
+RELEASE_INC_VERSION=$((RELEASE_INC_VERSION+1))
+RELEASE_VERSION="2.0.4.${RELEASE_INC_VERSION}"
 
 echo
-echo "Building package ..."
+echo "0. Stashing git"
+git stash push
 
+echo
+echo "1. Building package"
+echo
 . ./build-package.sh
 
-echo $RELEASE_FILE_NAME
-exit
-
 echo
-echo "Building installers ..."
+echo "2. Building installers"
+echo
 mkdir -p "${UPDATE_TARGET}/Installers"
 bash "build-installers.sh" --target-dir "${UPDATE_TARGET}/Installers" "${UPDATE_TARGET}/${RELEASE_FILE_NAME}.zip"
 
-# Send the password along to avoid typing it again
-export KEYFILE_PASSWORD
+echo
+echo "3. Deploying"
+bash "deploy.sh" #--target-dir "${UPDATE_TARGET}/Installers" "${UPDATE_TARGET}/${RELEASE_FILE_NAME}.zip"
 
-
+echo
+echo "4. Updating git"
 increase_release_number
-echo "+ updating git repo" && update_git_repo
-echo "+ uploading to AWS" && upload_binaries_to_aws
-echo "+ releasing to github" && release_to_github
-echo "+ posting to forum" && post_to_forum
-
+update_git_repo
