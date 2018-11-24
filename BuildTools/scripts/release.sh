@@ -1,4 +1,5 @@
-
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
+. "${SCRIPT_DIR}/common.sh"
 
 function update_git_repo () {
 	git checkout "Duplicati/License/VersionTag.txt"
@@ -16,8 +17,6 @@ function increase_release_number () {
 }
 
 
-SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
-. "${SCRIPT_DIR}/common.sh"
 get_keyfile_password
 
 RELEASE_INC_VERSION=$(cat Updates/build_version.txt)
@@ -31,7 +30,7 @@ git stash push
 echo
 echo "1. Building package"
 echo
-. ./build-package.sh
+. "${SCRIPT_DIR}/build-package.sh"
 
 echo
 echo "2. Building installers"

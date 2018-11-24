@@ -1,5 +1,26 @@
 #!/bin/bash
 
+function reset_version () {
+	"${MONO}" "BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="2.0.0.7"
+}
+
+function quit_on_error() {
+  local parent_lineno="$1"
+  local message="$2"
+  local code="${3:-1}"
+  if [[ -n "$message" ]] ; then
+    echo "Error in $0 line ${parent_lineno}: ${message}; exiting with status ${code}"
+  else
+    echo "Error in $0 line ${parent_lineno}; exiting with status ${code}"
+  fi
+
+  eval reset_version $REDIRECT
+  exit "${code}"
+}
+
+set -eE
+trap 'quit_on_error $LINENO' ERR
+
 function get_keyfile_password () {
 	if [ "z${KEYFILE_PASSWORD}" == "z" ]; then
 		echo -n "Enter keyfile password: "
@@ -14,22 +35,6 @@ function get_keyfile_password () {
         export KEYFILE_PASSWORD
 	fi
 }
-
-function quit_on_error() {
-  local parent_lineno="$1"
-  local message="$2"
-  local code="${3:-1}"
-  if [[ -n "$message" ]] ; then
-    echo "Error on or near line ${parent_lineno}: ${message}; exiting with status ${code}"
-  else
-    echo "Error on or near line ${parent_lineno}; exiting with status ${code}"
-  fi
-
-  eval reset_version $REDIRECT
-  exit "${code}"
-}
-
-
 
 function sign_with_authenticode () {
 	if [ ! -f "${AUTHENTICODE_PFXFILE}" ] || [ ! -f "${AUTHENTICODE_PASSWORD}" ]; then

@@ -2,13 +2,6 @@
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 . "${SCRIPT_DIR}/common.sh"
 
-set -eE
-trap 'quit_on_error $LINENO' ERR
-
-function reset_version () {
-	"${MONO}" "BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="2.0.0.7"
-}
-
 function generate_package () {
 	UPDATER_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-release.key"
 	UPDATE_TARGET=Updates/build/${RELEASE_TYPE}_target-${RELEASE_VERSION}
@@ -50,7 +43,7 @@ function generate_package () {
 }
 
 function prepare_update_source_folder () {
-	UPDATE_SOURCE=Updates/build/${RELEASE_TYPE}_source-${RELEASE_VERSION}
+	UPDATE_SOURCE="${SCRIPT_DIR}/Updates/build/${RELEASE_TYPE}_source-${RELEASE_VERSION}"
 	rm -rf "${UPDATE_SOURCE}"
 	mkdir -p "${UPDATE_SOURCE}"
 
@@ -71,7 +64,7 @@ function prepare_update_source_folder () {
 	done
 
 	# Install the assembly redirects for all Duplicati .exe files
-	find "${UPDATE_SOURCE}" -maxdepth 1 -type f -name Duplicati.*.exe -exec cp Installer/AssemblyRedirects.xml {}.config \;
+	find "${UPDATE_SOURCE}" -maxdepth 1 -type f -name Duplicati.*.exe -exec cp ${SCRIPT_DIR}/../Installer/AssemblyRedirects.xml {}.config \;
 
 	# Clean some unwanted build files
 	for FILE in "control_dir" "Duplicati-server.sqlite" "Duplicati.debug.log" "updates"; do
@@ -225,11 +218,11 @@ then
 	done
 fi
 
-echo "generating package zipfile"
+echo "+ generating package zipfile"
 eval generate_package $REDIRECT
 eval reset_version $REDIRECT
 
 echo
-echo "Built ${RELEASE_TYPE} version: ${RELEASE_VERSION} - ${RELEASE_NAME}"
-echo "    in folder: ${UPDATE_TARGET}"
+echo "++ Built ${RELEASE_TYPE} version: ${RELEASE_VERSION} - ${RELEASE_NAME}"
+echo "   in folder: ${UPDATE_TARGET}"
 echo
