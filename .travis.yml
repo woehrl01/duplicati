@@ -69,7 +69,6 @@ jobs:
         - TEST_CATEGORIES=Utility,UriUtility,IO
         - INSTALL_OPT=NUNIT
 
-
     - stage: integration tests
       env: INSTALL_OPT=SELENIUM
       script:
@@ -80,3 +79,7 @@ jobs:
         sauce_connect:
           username: $SAUCE_USERNAME
           access_key: $SAUCE_ACCESS_KEY
+    - stage: deploy
+    # TODO: needs to be conditioned
+      script:
+        - ./Buildtools/scripts/release.sh
