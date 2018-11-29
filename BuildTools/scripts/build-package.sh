@@ -2,18 +2,24 @@
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 . "${SCRIPT_DIR}/common.sh"
 
-function generate_package () {
+
+function set_gpg_autoupdate_options () {
+	# Newer GPG needs this to allow input from a non-terminal
+	export GPG_TTY=$(tty)
+	GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
+	GPG=/usr/local/bin/gpg2
 	UPDATER_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-release.key"
+	auto_update_options="$auto_update_options --gpgkeyfile=\"${GPG_KEYFILE}\" --gpgpath=\"${GPG}\" \
+	--keyfile-password=\"${KEYFILE_PASSWORD}\" --keyfile=\"${UPDATER_KEYFILE}\""
+}
+
+function generate_package () {
 	UPDATE_TARGET=Updates/build/${RELEASE_TYPE}_target-${RELEASE_VERSION}
 	UPDATE_ZIP_URLS="https://updates.duplicati.com/${RELEASE_TYPE}/${RELEASE_FILE_NAME}.zip;https://alt.updates.duplicati.com/${RELEASE_TYPE}/${RELEASE_FILE_NAME}.zip"
 
 	if [ -e "${UPDATE_TARGET}" ]; then rm -rf "${UPDATE_TARGET}"; fi
 	mkdir -p "${UPDATE_TARGET}"
 
-	# Newer GPG needs this to allow input from a non-terminal
-	export GPG_TTY=$(tty)
-	GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
-	GPG=/usr/local/bin/gpg2
 
 	auto_update_options="--input=\"${UPDATE_SOURCE}\" --output=\"${UPDATE_TARGET}\"  \
 	 --manifest=Updates/${RELEASE_TYPE}.manifest --changeinfo=\"${RELEASE_CHANGEINFO}\" --displayname=\"${RELEASE_NAME}\" \
@@ -21,8 +27,7 @@ function generate_package () {
 
 	if $SIGNED
 	then
-		auto_update_options="$auto_update_options --gpgkeyfile=\"${GPG_KEYFILE}\" --gpgpath=\"${GPG}\" \
-		--keyfile-password=\"${KEYFILE_PASSWORD}\" --keyfile=\"${UPDATER_KEYFILE}\""
+		set_gpg_autoupdate_options
 	fi
 
 	# if zip is not written, non-zero return code will cause script to stop
