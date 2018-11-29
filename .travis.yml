@@ -1,10 +1,12 @@
 language: minimal
-solution: Duplicati.sln
+services: docker
+#solution: Duplicati.sln
 dotnet: 2.0.0
 before_install:
   - sudo apt-get install moreutils
 install: ./BuildTools/scripts/travis/travis-install.sh $INSTALL_OPT | ts
 script: ./BuildTools/scripts/travis/travis.sh $TRAVIS_BUILD_DIR $TEST_CATEGORIES $ZIPFILE | ts
+
 addons:
   coverity_scan:
     project:
@@ -30,7 +32,10 @@ env:
 jobs:
   include:
     - stage: build
-      install: ./BuildTools/scripts/travis/install-build.sh
+      install:
+        - ./BuildTools/scripts/travis/install-build.sh
+      script:
+        - ./BuildTools/scripts/travis/build-wrapper.sh
 
     - stage: unit tests
       env:
