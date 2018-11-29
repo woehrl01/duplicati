@@ -1,12 +1,7 @@
 #!/bin/bash
 
-quit_on_error() {
-    echo "Error on line $1, stopping build of installer(s)."
-    exit 1
-}
-
-set -eE
-trap 'quit_on_error $LINENO' ERR
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
+. "${SCRIPT_DIR}/common.sh"
 
 function build_installer_debian () {
 	check_docker
@@ -236,7 +231,6 @@ while true ; do
     shift
 done
 
-SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 RELEASE_FILE_NAME=$(basename "$ZIPFILE" .zip)
 VERSION=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 1)
 BUILDTYPE=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 2)
@@ -249,9 +243,6 @@ echo "Filename: ${ZIPFILE}"
 echo "Version: ${VERSION}"
 echo "Buildtype: ${BUILDTYPE}"
 echo "Buildtag: ${BUILDTAG}"
-
-
-. ${SCRIPT_DIR}/common.sh
 
 if [[ $INSTALLERS =~ "debian" ]]; then
 	build_installer_debian
