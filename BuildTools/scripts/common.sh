@@ -1,5 +1,8 @@
 #!/bin/bash
 
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
+DUPLICATI_ROOT="../../"
+
 function reset_version () {
 	"${MONO}" "BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="2.0.0.7"
 }
@@ -20,6 +23,39 @@ function quit_on_error() {
 
 set -eE
 trap 'quit_on_error $LINENO' ERR
+
+RELEASE_CHANGELOG_FILE="${SCRIPT_DIR}/${DUPLICATI_ROOT}/changelog"
+RELEASE_CHANGELOG_NEWS_FILE="${SCRIPT_DIR}/${DUPLICATI_ROOT}/changelog-news.txt" # never in repo due to .gitignore
+
+function update_changelog () {
+	if [[ ! -f "${RELEASE_CHANGELOG_NEWS_FILE}" ]]; then
+		echo "No updates to add to changelog found"
+		echo
+		echo "To make a build without changelog news, run:"
+		echo "    touch ""${RELEASE_CHANGELOG_NEWS_FILE}"" "
+		return
+	fi
+
+	RELEASE_CHANGEINFO_NEWS=$(cat "${RELEASE_CHANGELOG_NEWS_FILE}" 2>/dev/null)
+	if [ ! "x${RELEASE_CHANGEINFO_NEWS}" == "x" ]; then
+
+		echo "${RELEASE_TIMESTAMP} - ${RELEASE_NAME}" > "tmp_changelog.txt"
+		echo "==========" >> "tmp_changelog.txt"
+		echo "${RELEASE_CHANGEINFO_NEWS}" >> "tmp_changelog.txt"
+		echo >> "tmp_changelog.txt"
+		cat "${RELEASE_CHANGELOG_FILE}" >> "tmp_changelog.txt"
+		cp "tmp_changelog.txt" "${RELEASE_CHANGELOG_FILE}"
+		rm "tmp_changelog.txt"
+	fi
+}
+
+function remove_changelog_tmp () {
+    rm -rf $RELEASE_CHANGELOG_NEWS_FILE
+}
+
+function reset_changelog () {
+    git checkout "${RELEASE_CHANGELOG_FILE}"
+}
 
 function get_keyfile_password () {
 	if [ "z${KEYFILE_PASSWORD}" == "z" ]; then

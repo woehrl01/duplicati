@@ -105,29 +105,6 @@ function clean_and_build () {
 }
 
 function update_text_files() {
-	RELEASE_CHANGELOG_NEWS_FILE="changelog-news.txt" # never in repo due to .gitignore
-
-	if [[ ! -f "${RELEASE_CHANGELOG_NEWS_FILE}" ]]; then
-		echo "No updates to add to changelog found"
-		echo
-		echo "To make a build without changelog news, run:"
-		echo "    touch ""${RELEASE_CHANGELOG_NEWS_FILE}"" "
-		exit 0
-	fi
-
-	RELEASE_CHANGEINFO_NEWS=$(cat "${RELEASE_CHANGELOG_NEWS_FILE}" 2>/dev/null)
-	if [ ! "x${RELEASE_CHANGEINFO_NEWS}" == "x" ]; then
-
-		echo "${RELEASE_TIMESTAMP} - ${RELEASE_NAME}" > "tmp_changelog.txt"
-		echo "==========" >> "tmp_changelog.txt"
-		echo "${RELEASE_CHANGEINFO_NEWS}" >> "tmp_changelog.txt"
-		echo >> "tmp_changelog.txt"
-		cat "${RELEASE_CHANGELOG_FILE}" >> "tmp_changelog.txt"
-		cp "tmp_changelog.txt" "${RELEASE_CHANGELOG_FILE}"
-		rm "tmp_changelog.txt"
-	fi
-	rm "${RELEASE_CHANGELOG_NEWS_FILE}"
-
 	echo "${RELEASE_NAME}" > "Duplicati/License/VersionTag.txt"
 	echo "${RELEASE_TYPE}" > "Duplicati/Library/AutoUpdater/AutoUpdateBuildChannel.txt"
 	UPDATE_MANIFEST_URLS="https://updates.duplicati.com/${RELEASE_TYPE}/latest.manifest;https://alt.updates.duplicati.com/${RELEASE_TYPE}/latest.manifest"
@@ -137,14 +114,12 @@ function update_text_files() {
 	# TODO: in case of auto releasing, put some git log in changelog.
 	RELEASE_CHANGEINFO=$(cat ${RELEASE_CHANGELOG_FILE})
 	if [ "x${RELEASE_CHANGEINFO}" == "x" ]; then
-		echo "No information in changelog file"
+		echo "WarningNo information in changelog file"
 		exit 0
 	fi
 }
 
 MONO=`which mono || /Library/Frameworks/Mono.framework/Commands/mono`
-LOCAL=false
-AUTO_RELEASE=false
 SIGNED=true
 REDIRECT=" > /dev/null"
 
@@ -156,12 +131,6 @@ while true ; do
         ;;
 	--debug)
 		REDIRECT=""
-		;;
-	--local)
-		LOCAL=true
-		;;
-	--auto)
-		AUTO_RELEASE=true
 		;;
 	--unsigned)
 		SIGNED=false
@@ -195,11 +164,13 @@ fi
 
 RELEASE_TIMESTAMP=$(date +%Y-%m-%d)
 RELEASE_NAME="${RELEASE_VERSION}_${RELEASE_TYPE}_${RELEASE_TIMESTAMP}"
-RELEASE_CHANGELOG_FILE="changelog.txt"
 RELEASE_FILE_NAME="duplicati-${RELEASE_NAME}"
 
-echo "+ updating changelog and version text files"
-$LOCAL || update_text_files
+echo "+ updating changelog"
+update_changelog
+
+ech "+ updating versions in files"
+update_text_files
 
 echo "+ compiling binaries"
 eval clean_and_build $REDIRECT
@@ -226,6 +197,9 @@ fi
 echo "+ generating package zipfile"
 eval generate_package $REDIRECT
 eval reset_version $REDIRECT
+
+echo "+ resetting changelog (will be committed after deploy)"
+reset_changelog
 
 echo
 echo "++ Built ${RELEASE_TYPE} version: ${RELEASE_VERSION} - ${RELEASE_NAME}"

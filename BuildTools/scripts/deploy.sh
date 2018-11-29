@@ -177,9 +177,12 @@ function deploy_docker () {
 #     echo "Skipping CDN update"
 # fi
 
-
-echo "+ updating git repo" && update_git_repo
 echo "+ uploading to AWS" && upload_binaries_to_aws
 echo "+ releasing to github" && release_to_github
 echo "+ posting to forum" && post_to_forum
+
+echo "+ updating changelog" && update_changelog
+echo "+ updating git repo" && update_git_repo
+echo "+ removing temp changelog" && remove_changelog_tmp
+
 
