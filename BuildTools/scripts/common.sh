@@ -1,10 +1,10 @@
 #!/bin/bash
 
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
-DUPLICATI_ROOT="../../"
+DUPLICATI_ROOT="${SCRIPT_DIR}/../../"
 
 function reset_version () {
-	"${MONO}" "BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="2.0.0.7"
+	"${MONO}" "${DUPLICATI_ROOT}/BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="2.0.0.7"
 }
 
 function quit_on_error() {
@@ -24,15 +24,12 @@ function quit_on_error() {
 set -eE
 trap 'quit_on_error $LINENO' ERR
 
-RELEASE_CHANGELOG_FILE="${SCRIPT_DIR}/${DUPLICATI_ROOT}/changelog"
-RELEASE_CHANGELOG_NEWS_FILE="${SCRIPT_DIR}/${DUPLICATI_ROOT}/changelog-news.txt" # never in repo due to .gitignore
+RELEASE_CHANGELOG_FILE="${DUPLICATI_ROOT}/changelog.txt"
+RELEASE_CHANGELOG_NEWS_FILE="${DUPLICATI_ROOT}/changelog-news.txt" # never in repo due to .gitignore
 
 function update_changelog () {
 	if [[ ! -f "${RELEASE_CHANGELOG_NEWS_FILE}" ]]; then
-		echo "No updates to add to changelog found"
-		echo
-		echo "To make a build without changelog news, run:"
-		echo "    touch ""${RELEASE_CHANGELOG_NEWS_FILE}"" "
+		echo "  No updates to add to changelog found. Describe updates in ${RELEASE_CHANGELOG_NEWS_FILE}"
 		return
 	fi
 
@@ -46,6 +43,11 @@ function update_changelog () {
 		cat "${RELEASE_CHANGELOG_FILE}" >> "tmp_changelog.txt"
 		cp "tmp_changelog.txt" "${RELEASE_CHANGELOG_FILE}"
 		rm "tmp_changelog.txt"
+	fi
+
+	RELEASE_CHANGEINFO=$(cat ${RELEASE_CHANGELOG_FILE})
+	if [ "x${RELEASE_CHANGEINFO}" == "x" ]; then
+		echo "  Warning: No information in changelog file"
 	fi
 }
 

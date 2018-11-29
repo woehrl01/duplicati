@@ -36,24 +36,23 @@ function set_gpg_autoupdate_options () {
 }
 
 function generate_package () {
-	UPDATE_TARGET=Updates/build/${RELEASE_TYPE}_target-${RELEASE_VERSION}
+	UPDATE_TARGET="${DUPLICATI_ROOT}/Updates/build/${RELEASE_TYPE}_target-${RELEASE_VERSION}"
 	UPDATE_ZIP_URLS="https://updates.duplicati.com/${RELEASE_TYPE}/${RELEASE_FILE_NAME}.zip;https://alt.updates.duplicati.com/${RELEASE_TYPE}/${RELEASE_FILE_NAME}.zip"
 
 	if [ -e "${UPDATE_TARGET}" ]; then rm -rf "${UPDATE_TARGET}"; fi
 	mkdir -p "${UPDATE_TARGET}"
 
-
 	auto_update_options="--input=\"${UPDATE_SOURCE}\" --output=\"${UPDATE_TARGET}\"  \
-	 --manifest=Updates/${RELEASE_TYPE}.manifest --changeinfo=\"${RELEASE_CHANGEINFO}\" --displayname=\"${RELEASE_NAME}\" \
+	 --manifest=${DUPLICATI_ROOT}/Updates/${RELEASE_TYPE}.manifest --changeinfo=\"${RELEASE_CHANGEINFO}\" --displayname=\"${RELEASE_NAME}\" \
 	 --remoteurls=\"${UPDATE_ZIP_URLS}\" --version=\"${RELEASE_VERSION}\""
 
 	set_gpg_autoupdate_options
 
 	# Remove any extra misc files before packing (like on mac)
-	find  . -type f -name ".DS_Store" | xargs rm -rf && find  . -type f -name "Thumbs.db" | xargs rm -rf
+	find "${DUPLICATI_ROOT}" -type f -name ".DS_Store" | xargs rm -rf && find  . -type f -name "Thumbs.db" | xargs rm -rf
 
 	# if zip is not written, non-zero return code will cause script to stop
-	"${MONO}" "BuildTools/AutoUpdateBuilder/bin/Release/AutoUpdateBuilder.exe" $auto_update_options
+	"${MONO}" "${DUPLICATI_ROOT}/BuildTools/AutoUpdateBuilder/bin/Release/AutoUpdateBuilder.exe" $auto_update_options
 
 	mv "${UPDATE_TARGET}/package.zip" "${UPDATE_TARGET}/latest.zip"
 	mv "${UPDATE_TARGET}/autoupdate.manifest" "${UPDATE_TARGET}/latest.manifest"
@@ -70,21 +69,21 @@ function generate_package () {
 }
 
 function prepare_update_source_folder () {
-	UPDATE_SOURCE="${SCRIPT_DIR}/Updates/build/${RELEASE_TYPE}_source-${RELEASE_VERSION}"
+	UPDATE_SOURCE="${DUPLICATI_ROOT}/Updates/build/${RELEASE_TYPE}_source-${RELEASE_VERSION}"
 	rm -rf "${UPDATE_SOURCE}"
 	mkdir -p "${UPDATE_SOURCE}"
 
-	cp -R Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/* "${UPDATE_SOURCE}"
-	cp -R Duplicati/Server/webroot "${UPDATE_SOURCE}"
+	cp -R "${DUPLICATI_ROOT}/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/"* "${UPDATE_SOURCE}"
+	cp -R "${DUPLICATI_ROOT}Duplicati/Server/webroot" "${UPDATE_SOURCE}"
 
 	# We copy some files for alphavss manually as they are not picked up by xbuild
 	mkdir "${UPDATE_SOURCE}/alphavss"
-	for FN in Duplicati/Library/Snapshots/bin/Release/AlphaVSS.*.dll; do
+	for FN in "${DUPLICATI_ROOT}/Duplicati/Library/Snapshots/bin/Release/"AlphaVSS.*.dll; do
 		cp "${FN}" "${UPDATE_SOURCE}/alphavss/"
 	done
 
 	# Fix for some support libraries not being picked up
-	for BACKEND in Duplicati/Library/Backend/*; do
+	for BACKEND in "${DUPLICATI_ROOT}/Duplicati/Library/Backend/"*; do
 		if [ -d "${BACKEND}/bin/Release/" ]; then
 			cp "${BACKEND}/bin/Release/"*.dll "${UPDATE_SOURCE}"
 		fi
@@ -111,34 +110,27 @@ function clean_and_build () {
 	XBUILD=`which msbuild || /Library/Frameworks/Mono.framework/Commands/msbuild`
 	NUGET=`which nuget || /Library/Frameworks/Mono.framework/Commands/nuget`
 
-	"${XBUILD}" /property:Configuration=Release "BuildTools/UpdateVersionStamp/UpdateVersionStamp.csproj"
-	"${MONO}" "BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="${RELEASE_VERSION}"
+	"${XBUILD}" /property:Configuration=Release "${DUPLICATI_ROOT}/BuildTools/UpdateVersionStamp/UpdateVersionStamp.csproj"
+	"${MONO}" "${DUPLICATI_ROOT}/BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="${RELEASE_VERSION}"
 
 	# build autoupdate
-	"${NUGET}" restore "BuildTools/AutoUpdateBuilder/AutoUpdateBuilder.sln"
-	"${NUGET}" restore "Duplicati.sln"
-	"${XBUILD}" /p:Configuration=Release "BuildTools/AutoUpdateBuilder/AutoUpdateBuilder.sln"
+	"${NUGET}" restore "${DUPLICATI_ROOT}/BuildTools/AutoUpdateBuilder/AutoUpdateBuilder.sln"
+	"${NUGET}" restore "${DUPLICATI_ROOT}/Duplicati.sln"
+	"${XBUILD}" /p:Configuration=Release "${DUPLICATI_ROOT}/BuildTools/AutoUpdateBuilder/AutoUpdateBuilder.sln"
 
 	# clean
-	find "Duplicati" -type d -name "Release" | xargs rm -rf
-	"${XBUILD}" /p:Configuration=Release /target:Clean "Duplicati.sln"
+	find "${DUPLICATI_ROOT}/Duplicati" -type d -name "Release" | xargs rm -rf
+	"${XBUILD}" /p:Configuration=Release /target:Clean "${DUPLICATI_ROOT}/Duplicati.sln"
 
-	"${XBUILD}" /p:DefineConstants=__MonoCS__ /p:DefineConstants=ENABLE_GTK /p:Configuration=Release "Duplicati.sln"
+	"${XBUILD}" /p:DefineConstants=__MonoCS__ /p:DefineConstants=ENABLE_GTK /p:Configuration=Release "${DUPLICATI_ROOT}/Duplicati.sln"
 }
 
 function update_text_files() {
-	echo "${RELEASE_NAME}" > "Duplicati/License/VersionTag.txt"
-	echo "${RELEASE_TYPE}" > "Duplicati/Library/AutoUpdater/AutoUpdateBuildChannel.txt"
+	echo "${RELEASE_NAME}" > "${DUPLICATI_ROOT}/Duplicati/License/VersionTag.txt"
+	echo "${RELEASE_TYPE}" > "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateBuildChannel.txt"
 	UPDATE_MANIFEST_URLS="https://updates.duplicati.com/${RELEASE_TYPE}/latest.manifest;https://alt.updates.duplicati.com/${RELEASE_TYPE}/latest.manifest"
-	echo "${UPDATE_MANIFEST_URLS}" > "Duplicati/Library/AutoUpdater/AutoUpdateURL.txt"
-	cp "Updates/release_key.txt"  "Duplicati/Library/AutoUpdater/AutoUpdateSignKey.txt"
-
-	# TODO: in case of auto releasing, put some git log in changelog.
-	RELEASE_CHANGEINFO=$(cat ${RELEASE_CHANGELOG_FILE})
-	if [ "x${RELEASE_CHANGEINFO}" == "x" ]; then
-		echo "WarningNo information in changelog file"
-		exit 0
-	fi
+	echo "${UPDATE_MANIFEST_URLS}" > "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateURL.txt"
+	cp "${DUPLICATI_ROOT}/Updates/release_key.txt"  "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateSignKey.txt"
 }
 
 MONO=`which mono || /Library/Frameworks/Mono.framework/Commands/mono`
@@ -147,10 +139,6 @@ REDIRECT=" > /dev/null"
 
 while true ; do
     case "$1" in
-    --help)
-        show_help
-        exit 0
-        ;;
 	--debug)
 		REDIRECT=""
 		;;
@@ -168,7 +156,6 @@ while true ; do
     * )
 		if [ "x$1" == "x" ]; then
 			RELEASE_TYPE="canary"
-			echo "No release type specified, using ${RELEASE_TYPE}"
 			break
 		else
 			RELEASE_TYPE=$1
@@ -178,8 +165,7 @@ while true ; do
     shift
 done
 
-# Validations
-if [[ -e "$RELEASE_VERSION" ]]; then
+if [[ "$RELEASE_VERSION" == "" ]]; then
 	echo 'no version specified, exiting'
 	exit 1
 fi
@@ -188,6 +174,9 @@ RELEASE_TIMESTAMP=$(date +%Y-%m-%d)
 RELEASE_NAME="${RELEASE_VERSION}_${RELEASE_TYPE}_${RELEASE_TIMESTAMP}"
 RELEASE_FILE_NAME="duplicati-${RELEASE_NAME}"
 
+echo
+echo "Building package ${RELEASE_FILE_NAME}"
+echo
 echo "+ updating changelog" && update_changelog
 
 echo "+ updating versions in files" && update_text_files
@@ -198,13 +187,12 @@ echo "+ copying binaries for packaging" && prepare_update_source_folder
 
 echo "+ signing binaries with authenticode" && sign_binaries_with_authenticode
 
-echo "+ generating package zipfile" && $(eval generate_package $REDIRECT)
+echo "+ generating package zipfile" && eval generate_package $REDIRECT
 
-echo "+ resetting version" && $(eval reset_version $REDIRECT)
+echo "+ resetting version" && eval reset_version $REDIRECT
 
 echo "+ resetting changelog (will be committed after deploy)" && reset_changelog
 
 echo
-echo "++ Built ${RELEASE_TYPE} version: ${RELEASE_VERSION} - ${RELEASE_NAME}"
-echo "   in folder: ${UPDATE_TARGET}"
+echo "= Built succesfully package delivered in: ${UPDATE_TARGET}"
 echo
