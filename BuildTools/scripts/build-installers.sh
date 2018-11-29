@@ -272,11 +272,6 @@ if [ !$UNSIGNED ]; then
 	GPG=/usr/local/bin/gpg2
 	set_gpg_data
 
-	# SIGNING CONFIG
-	GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
-	AUTHENTICODE_PFXFILE="${HOME}/.config/signkeys/Duplicati/authenticode.pfx"
-	AUTHENTICODE_PASSWORD="${HOME}/.config/signkeys/Duplicati/authenticode.key"
-
 	sign_with_gpg
 
 	sign_with_authenticode "${UPDATE_TARGET}/${MSI64NAME}"

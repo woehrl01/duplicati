@@ -26,10 +26,6 @@ function set_gpg_autoupdate_options () {
 	fi
 
 	get_keyfile_password
-	# Newer GPG needs this to allow input from a non-terminal
-	export GPG_TTY=$(tty)
-	GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
-	GPG=/usr/local/bin/gpg2
 	UPDATER_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-release.key"
 	auto_update_options="$auto_update_options --gpgkeyfile=\"${GPG_KEYFILE}\" --gpgpath=\"${GPG}\" \
 	--keyfile-password=\"${KEYFILE_PASSWORD}\" --keyfile=\"${UPDATER_KEYFILE}\""

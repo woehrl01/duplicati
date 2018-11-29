@@ -2,6 +2,13 @@
 
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 DUPLICATI_ROOT="${SCRIPT_DIR}/../../"
+AUTHENTICODE_PFXFILE="${HOME}/.config/signkeys/Duplicati/authenticode.pfx"
+AUTHENTICODE_PASSWORD="${HOME}/.config/signkeys/Duplicati/authenticode.key"
+GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
+GPG=/usr/local/bin/gpg2
+# Newer GPG needs this to allow input from a non-terminal
+export GPG_TTY=$(tty)
+
 
 function reset_version () {
 	"${MONO}" "${DUPLICATI_ROOT}/BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="2.0.0.7"
@@ -99,7 +106,7 @@ function sign_with_authenticode () {
     get_keyfile_password
 
 	if [ "z${PFX_PASS}" == "z" ]; then
-        PFX_PASS=$("${MONO}" "BuildTools/AutoUpdateBuilder/bin/Debug/SharpAESCrypt.exe" d "${KEYFILE_PASSWORD}" "${AUTHENTICODE_PASSWORD}")
+        PFX_PASS=$("${MONO}" "${DUPLICATI_ROOT}/BuildTools/AutoUpdateBuilder/bin/Debug/SharpAESCrypt.exe" d "${KEYFILE_PASSWORD}" "${AUTHENTICODE_PASSWORD}")
 
         DECRYPT_STATUS=$?
         if [ "${DECRYPT_STATUS}" -ne 0 ]; then
