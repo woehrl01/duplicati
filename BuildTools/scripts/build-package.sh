@@ -2,8 +2,30 @@
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 . "${SCRIPT_DIR}/common.sh"
 
+function sign_binaries_with_authenticode  () {
+	if [ $SIGNED != true ]
+	then
+		return
+	fi
+
+	get_keyfile_password
+
+	for exec in "${UPDATE_SOURCE}/Duplicati."*.exe; do
+		sign_with_authenticode "${exec}"
+	done
+	for exec in "${UPDATE_SOURCE}/Duplicati."*.dll; do
+		sign_with_authenticode "${exec}"
+	done
+}
 
 function set_gpg_autoupdate_options () {
+
+	if [ $SIGNED != true ]
+	then
+		return
+	fi
+
+	get_keyfile_password
 	# Newer GPG needs this to allow input from a non-terminal
 	export GPG_TTY=$(tty)
 	GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
@@ -25,10 +47,10 @@ function generate_package () {
 	 --manifest=Updates/${RELEASE_TYPE}.manifest --changeinfo=\"${RELEASE_CHANGEINFO}\" --displayname=\"${RELEASE_NAME}\" \
 	 --remoteurls=\"${UPDATE_ZIP_URLS}\" --version=\"${RELEASE_VERSION}\""
 
-	if $SIGNED
-	then
-		set_gpg_autoupdate_options
-	fi
+	set_gpg_autoupdate_options
+
+	# Remove any extra misc files before packing (like on mac)
+	find  . -type f -name ".DS_Store" | xargs rm -rf && find  . -type f -name "Thumbs.db" | xargs rm -rf
 
 	# if zip is not written, non-zero return code will cause script to stop
 	"${MONO}" "BuildTools/AutoUpdateBuilder/bin/Release/AutoUpdateBuilder.exe" $auto_update_options
@@ -166,40 +188,21 @@ RELEASE_TIMESTAMP=$(date +%Y-%m-%d)
 RELEASE_NAME="${RELEASE_VERSION}_${RELEASE_TYPE}_${RELEASE_TIMESTAMP}"
 RELEASE_FILE_NAME="duplicati-${RELEASE_NAME}"
 
-echo "+ updating changelog"
-update_changelog
+echo "+ updating changelog" && update_changelog
 
-ech "+ updating versions in files"
-update_text_files
+echo "+ updating versions in files" && update_text_files
 
-echo "+ compiling binaries"
-eval clean_and_build $REDIRECT
+echo "+ compiling binaries" && $(eval clean_and_build $REDIRECT)
 
-echo "+ copying binaries for packaging"
-prepare_update_source_folder
+echo "+ copying binaries for packaging" && prepare_update_source_folder
 
-# Remove all .DS_Store and Thumbs.db files
-find  . -type f -name ".DS_Store" | xargs rm -rf && find  . -type f -name "Thumbs.db" | xargs rm -rf
+echo "+ signing binaries with authenticode" && sign_binaries_with_authenticode
 
-if $SIGNED
-then
-	echo "+ signing with authenticode"
-	get_keyfile_password
+echo "+ generating package zipfile" && $(eval generate_package $REDIRECT)
 
-	for exec in "${UPDATE_SOURCE}/Duplicati."*.exe; do
-		sign_with_authenticode "${exec}"
-	done
-	for exec in "${UPDATE_SOURCE}/Duplicati."*.dll; do
-		sign_with_authenticode "${exec}"
-	done
-fi
+echo "+ resetting version" && $(eval reset_version $REDIRECT)
 
-echo "+ generating package zipfile"
-eval generate_package $REDIRECT
-eval reset_version $REDIRECT
-
-echo "+ resetting changelog (will be committed after deploy)"
-reset_changelog
+echo "+ resetting changelog (will be committed after deploy)" && reset_changelog
 
 echo
 echo "++ Built ${RELEASE_TYPE} version: ${RELEASE_VERSION} - ${RELEASE_NAME}"
