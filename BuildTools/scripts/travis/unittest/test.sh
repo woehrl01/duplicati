@@ -1,20 +1,7 @@
 #!/bin/bash
 
-quit_on_error() {
-    echo "Error on line $1, stopping build."
-    exit 1
-}
-
-set -eE
-trap 'quit_on_error $LINENO' ERR
-
-function build () {
-    echo "travis_fold:start:build_duplicati"
-    echo "+ BUILDING BINARIES"
-    msbuild /p:Configuration=Release "${TRAVIS_BUILD_DIR}"/Duplicati.sln
-    cp -r "${TRAVIS_BUILD_DIR}"/Duplicati/Server/webroot "${TRAVIS_BUILD_DIR}"/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/webroot
-    echo "travis_fold:end:build_duplicati"
-}
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
+. "${SCRIPT_DIR}/../shared.sh"
 
 function get_and_extract_test_zip () {
     # download and extract testdata
@@ -55,19 +42,15 @@ function start_test () {
         set_permissions
 
         echo "travis_fold:start:unit_test_$CAT"
-        echo "+ UNIT TESTING CATEGORY $CAT"
-        mono "${TRAVIS_BUILD_DIR}"/testrunner/NUnit.ConsoleRunner.3.5.0/tools/nunit3-console.exe \
-        "${TRAVIS_BUILD_DIR}"/Duplicati/UnitTest/bin/Release/Duplicati.UnitTest.dll --where:cat==$CAT --workers=1
+        echo "+ START UNIT TESTING CATEGORY $CAT"
+        mono "${DUPLICATI_ROOT}"/testrunner/NUnit.ConsoleRunner.3.5.0/tools/nunit3-console.exe \
+        "${DUPLICATI_ROOT}"/Duplicati/UnitTest/bin/Release/Duplicati.UnitTest.dll --where:cat==$CAT --workers=1
         echo "travis_fold:end:unit_test_$CAT"
+        echo "+ DONE UNIT TESTING CATEGORY $CAT"
     done
 }
 
-TRAVIS_BUILD_DIR=${1:-$(dirname "$0")/../..}
-CATEGORIES=$2
-ZIPFILE=$3
-[[ $CATEGORIES != "" ]] && SUPPRESS_BUILD_FOR_TEST=" > /dev/null"
+CATEGORIES=$1
+ZIPFILE=$2
 
-eval build $SUPPRESS_BUILD_FOR_TEST
-if [[ $CATEGORIES != "" ]]; then
-    start_test
-fi
+start_test

@@ -8,7 +8,7 @@ GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
 GPG=/usr/local/bin/gpg2
 # Newer GPG needs this to allow input from a non-terminal
 export GPG_TTY=$(tty)
-
+MONO=`which mono || /Library/Frameworks/Mono.framework/Commands/mono`
 
 function reset_version () {
 	"${MONO}" "${DUPLICATI_ROOT}/BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="2.0.0.7"

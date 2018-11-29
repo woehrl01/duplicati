@@ -1,12 +1,8 @@
 language: minimal
 services: docker
-#solution: Duplicati.sln
-dotnet: 2.0.0
 before_install:
   - sudo apt-get install moreutils
-install: ./BuildTools/scripts/travis/travis-install.sh $INSTALL_OPT | ts
-script: ./BuildTools/scripts/travis/travis.sh $TRAVIS_BUILD_DIR $TEST_CATEGORIES $ZIPFILE | ts
-
+  - set -o pipefail
 addons:
   coverity_scan:
     project:
@@ -21,70 +17,48 @@ env:
     # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
     #   via the "travis encrypt" command using the project repo's public key
     - secure: "ijaQDcVcMo/utuP514FiDZVGR5LJbATWmYDmgRIIaI0YG2Rk6uuJp9XXDXr8sx66JWttPGgs7Htqfy50VKHdr7nsfyCQCRNGmqF+OJeUgAQMj5spxn9A7PZY9+GVhnXoJ06wvYjCv5MPeLBMDK/KpIM5Ny5IG+TKzQy4U7Dyg0riMUT61aqzxSjTGfHZPmaqBICJTzsRmeGHglemFUz/1B4NAN+IeAtXoH9YIfA2LjJfYmMLckPgFQLKN/tQRaGPWXh77y0qVgA++K8UVu5W3yGo3JXBPDdabGgKs9BPlfN5/Ixnkcy6ekAubDA/Aspur9x7/szj4/AnGMY6frNB33nQcnJQZ/51GYKr6CXCmjoJQuWc8ZKdEMqDn3w/kyEzvluSjAsJNRVboeWPE4VfpAeUBsjQ+TuEQi8WXhN8VJgZV7yCkVlZTVbhtOxMPsBiFb74lpWC2iQuWLJv9ED6vyXZVzZhNtfjXNXNZzIwYxbcd7I0ZQ8fmDstFnvBJveJby2ZRpECXTbc03eIUq1SAaVJJY2r47RD1PwVqM3xvUTljIqtKdyIz915mEOjqG1BnCDaiGHYJ4byuDDeIUZO9X70s60Gh4hupZA2Ruup0v7SfYgkto6aNcStd0NYd716Vd7hqXNTp6nu01L5YYJDY4h5sHyBXVXbxCKlUb01kUw="
-  general:
     - USAGEREPORTER_Duplicati_LEVEL=none
     - AUTOUPDATER_Duplicati_SKIP_UPDATE=1
     - TMPDIR=$HOME/tmp
-
+    - BUILD_CACHE=${TRAVIS_BUILD_DIR}/../cache
+cache:
+  directories:
+    # There is one cache per branch, so concurrent builds on different branches possible!
+    # DO NOT SET ENVIRONMENT VARIABLES WITHIN JOBS, OR CACHES WILL NOT BE SHARED AMONGST JOBS!
+    - $BUILD_CACHE
+    - $HOME/download/
 
 # matrix expansion within jobs would be good:
 # https://github.com/travis-ci/travis-ci/issues/8295
 jobs:
   include:
     - stage: build
-      install:
-        - ./BuildTools/scripts/travis/install-build.sh
+    # DO NOT SET ENVIRONMENT VARIABLES WITHIN JOBS, OR CACHES WILL NOT BE SHARED AMONGST JOBS!
       script:
-        - ./BuildTools/scripts/travis/build-wrapper.sh
-
-    - stage: unit tests
-      env:
-        - INSTALL_OPT=NUNIT
-        - TEST_CATEGORIES=BulkNormal
-        - ZIPFILE=data.zip
-      cache:
-        directories:
-          - $HOME/download/
-    - stage: unit tests
-      env:
-        - INSTALL_OPT=NUNIT
-        - TEST_CATEGORIES=BulkNoSize
-        - ZIPFILE=data.zip
-      cache:
-        directories:
-          - $HOME/download/
-    - stage: unit tests
-      env:
-        - INSTALL_OPT=NUNIT
-        - TEST_CATEGORIES=SVNDataLong,SVNData
-        - ZIPFILE=DSMCBE.zip
-      cache:
-        directories:
-          - $HOME/download/
-    - stage: unit tests
-      env:
-        - TEST_CATEGORIES=Border,FILTER,Targeted
-        - INSTALL_OPT=NUNIT
-    - stage: unit tests
-      env:
-        - TEST_CATEGORIES=Purge,Serialization,WebApi
-        - INSTALL_OPT=NUNIT
-    - stage: unit tests
-      env:
-        - TEST_CATEGORIES=Utility,UriUtility,IO
-        - INSTALL_OPT=NUNIT
-
-    - stage: integration tests
-      env: INSTALL_OPT=SELENIUM
-      script:
-        - ./BuildTools/scripts/travis/travis.sh $TRAVIS_BUILD_DIR
-        - mono "${TRAVIS_BUILD_DIR}"/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/Duplicati.Server.exe &
-        - python guiTests/guiTest.py | ts
-      addons:
-        sauce_connect:
-          username: $SAUCE_USERNAME
-          access_key: $SAUCE_ACCESS_KEY
+          - ./BuildTools/scripts/travis/build/wrapper.sh --repodir "${TRAVIS_BUILD_DIR}" --cache "$BUILD_CACHE" | ts
+    # - stage: unit tests
+    #   script:
+    #     - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories BulkNormal --data data.zip --cache "$BUILD_CACHE" | ts
+    # - stage: unit tests
+    #   script:
+    #     - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories BulkNoSize --data data.zip --cache "$BUILD_CACHE" | ts
+    # - stage: unit tests
+    #   script:
+    #     - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories SVNDataLong,SVNData --data DSMCBE.zip --cache "$BUILD_CACHE" |  ts
+    # - stage: unit tests
+    #   script:
+    #     - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories Border --cache "$BUILD_CACHE" | ts
+    # - stage: unit tests
+    #   script:
+    #     - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories Filter,Targeted,Purge,Serialization,WebApi,Utility,UriUtility,IO --cache "$BUILD_CACHE" | ts
+    # - stage: integration tests
+    #   script:
+    #     - ./BuildTools/scripts/travis/integrationtest/wrapper.sh --cache "$BUILD_CACHE"
+    #   addons:
+    #     sauce_connect:
+    #       username: $SAUCE_USERNAME
+    #       access_key: $SAUCE_ACCESS_KEY
     - stage: deploy
     # TODO: needs to be conditioned
       script:
-        - ./BuildTools/scripts/release.sh
+        - ./BuildTools/scripts/travis/deploy/wrapper.sh --cache "$BUILD_CACHE" | ts

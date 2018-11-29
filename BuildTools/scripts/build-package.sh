@@ -121,15 +121,13 @@ function clean_and_build () {
 	"${XBUILD}" /p:DefineConstants=__MonoCS__ /p:DefineConstants=ENABLE_GTK /p:Configuration=Release "${DUPLICATI_ROOT}/Duplicati.sln"
 }
 
-MONO=`which mono || /Library/Frameworks/Mono.framework/Commands/mono`
 SIGNED=true
-REDIRECT=" > /dev/null"
 
 while true ; do
     case "$1" in
-	--debug)
-		REDIRECT=""
-		;;
+	--quiet)
+        IF_QUIET_SUPPRESS_OUTPUT=" > /dev/null"
+  		;;
 	--unsigned)
 		SIGNED=false
 		;;
@@ -169,15 +167,15 @@ echo "+ updating changelog" && update_changelog
 
 echo "+ updating versions in files" && update_version_files
 
-echo "+ compiling binaries" && eval clean_and_build $REDIRECT
+echo "+ compiling binaries" && eval clean_and_build $IF_QUIET_SUPPRESS_OUTPUT
 
 echo "+ copying binaries for packaging" && prepare_update_source_folder
 
 echo "+ signing binaries with authenticode" && sign_binaries_with_authenticode
 
-echo "+ generating package zipfile" && eval generate_package $REDIRECT
+echo "+ generating package zipfile" && eval generate_package $IF_QUIET_SUPPRESS_OUTPUT
 
-echo "+ resetting update version stamp" && eval reset_version $REDIRECT
+echo "+ resetting update version stamp" && eval reset_version $IF_QUIET_SUPPRESS_OUTPUT
 
 echo "+ resetting changelog (will be committed after deploy)" && reset_changelog
 
