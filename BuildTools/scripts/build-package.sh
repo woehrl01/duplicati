@@ -125,14 +125,6 @@ function clean_and_build () {
 	"${XBUILD}" /p:DefineConstants=__MonoCS__ /p:DefineConstants=ENABLE_GTK /p:Configuration=Release "${DUPLICATI_ROOT}/Duplicati.sln"
 }
 
-function update_text_files() {
-	echo "${RELEASE_NAME}" > "${DUPLICATI_ROOT}/Duplicati/License/VersionTag.txt"
-	echo "${RELEASE_TYPE}" > "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateBuildChannel.txt"
-	UPDATE_MANIFEST_URLS="https://updates.duplicati.com/${RELEASE_TYPE}/latest.manifest;https://alt.updates.duplicati.com/${RELEASE_TYPE}/latest.manifest"
-	echo "${UPDATE_MANIFEST_URLS}" > "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateURL.txt"
-	cp "${DUPLICATI_ROOT}/Updates/release_key.txt"  "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateSignKey.txt"
-}
-
 MONO=`which mono || /Library/Frameworks/Mono.framework/Commands/mono`
 SIGNED=true
 REDIRECT=" > /dev/null"
@@ -179,9 +171,9 @@ echo "Building package ${RELEASE_FILE_NAME}"
 echo
 echo "+ updating changelog" && update_changelog
 
-echo "+ updating versions in files" && update_text_files
+echo "+ updating versions in files" && update_version_files
 
-echo "+ compiling binaries" && $(eval clean_and_build $REDIRECT)
+echo "+ compiling binaries" && eval clean_and_build $REDIRECT
 
 echo "+ copying binaries for packaging" && prepare_update_source_folder
 
@@ -189,9 +181,11 @@ echo "+ signing binaries with authenticode" && sign_binaries_with_authenticode
 
 echo "+ generating package zipfile" && eval generate_package $REDIRECT
 
-echo "+ resetting version" && eval reset_version $REDIRECT
+echo "+ resetting update version stamp" && eval reset_version $REDIRECT
 
 echo "+ resetting changelog (will be committed after deploy)" && reset_changelog
+
+echo "+ resetting version files (will be commited after deploy)" && reset_version_files
 
 echo
 echo "= Built succesfully package delivered in: ${UPDATE_TARGET}"

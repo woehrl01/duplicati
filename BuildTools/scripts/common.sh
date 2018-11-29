@@ -27,6 +27,20 @@ trap 'quit_on_error $LINENO' ERR
 RELEASE_CHANGELOG_FILE="${DUPLICATI_ROOT}/changelog.txt"
 RELEASE_CHANGELOG_NEWS_FILE="${DUPLICATI_ROOT}/changelog-news.txt" # never in repo due to .gitignore
 
+function update_version_files() {
+	echo "${RELEASE_NAME}" > "${DUPLICATI_ROOT}/Duplicati/License/VersionTag.txt"
+	echo "${RELEASE_TYPE}" > "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateBuildChannel.txt"
+	UPDATE_MANIFEST_URLS="https://updates.duplicati.com/${RELEASE_TYPE}/latest.manifest;https://alt.updates.duplicati.com/${RELEASE_TYPE}/latest.manifest"
+	echo "${UPDATE_MANIFEST_URLS}" > "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateURL.txt"
+	cp "${DUPLICATI_ROOT}/Updates/release_key.txt"  "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateSignKey.txt"
+}
+
+function reset_version_files() {
+	git checkout "${DUPLICATI_ROOT}/Duplicati/License/VersionTag.txt"
+	git checkout "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateBuildChannel.txt"
+	git checkout "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateURL.txt"
+}
+
 function update_changelog () {
 	if [[ ! -f "${RELEASE_CHANGELOG_NEWS_FILE}" ]]; then
 		echo "  No updates to add to changelog found. Describe updates in ${RELEASE_CHANGELOG_NEWS_FILE}"
