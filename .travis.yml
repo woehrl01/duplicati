@@ -20,7 +20,7 @@ env:
     - USAGEREPORTER_Duplicati_LEVEL=none
     - AUTOUPDATER_Duplicati_SKIP_UPDATE=1
     - TMPDIR=$HOME/tmp
-    - BUILD_CACHE=${TRAVIS_BUILD_DIR}/../cache
+    - BUILD_CACHE=${TRAVIS_BUILD_DIR}/../.cache
 cache:
   directories:
     # There is one cache per branch, so concurrent builds on different branches possible!
@@ -36,21 +36,21 @@ jobs:
     # DO NOT SET ENVIRONMENT VARIABLES WITHIN JOBS, OR CACHES WILL NOT BE SHARED AMONGST JOBS!
       script:
           - ./BuildTools/scripts/travis/build/wrapper.sh --repodir "${TRAVIS_BUILD_DIR}" --cache "$BUILD_CACHE" | ts
-    # - stage: unit tests
-    #   script:
-    #     - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories BulkNormal --data data.zip --cache "$BUILD_CACHE" | ts
-    # - stage: unit tests
-    #   script:
-    #     - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories BulkNoSize --data data.zip --cache "$BUILD_CACHE" | ts
-    # - stage: unit tests
-    #   script:
-    #     - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories SVNDataLong,SVNData --data DSMCBE.zip --cache "$BUILD_CACHE" |  ts
-    # - stage: unit tests
-    #   script:
-    #     - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories Border --cache "$BUILD_CACHE" | ts
-    # - stage: unit tests
-    #   script:
-    #     - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories Filter,Targeted,Purge,Serialization,WebApi,Utility,UriUtility,IO --cache "$BUILD_CACHE" | ts
+    - stage: unit tests
+      script:
+        - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories BulkNormal --data data.zip --cache "$BUILD_CACHE" | ts
+    - stage: unit tests
+      script:
+        - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories BulkNoSize --data data.zip --cache "$BUILD_CACHE" | ts
+    - stage: unit tests
+      script:
+        - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories SVNDataLong,SVNData --data DSMCBE.zip --cache "$BUILD_CACHE" |  ts
+    - stage: unit tests
+      script:
+        - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories Border --cache "$BUILD_CACHE" | ts
+    - stage: unit tests
+      script:
+        - ./BuildTools/scripts/travis/unittest/wrapper.sh --categories Filter,Targeted,Purge,Serialization,WebApi,Utility,UriUtility,IO --cache "$BUILD_CACHE" | ts
     # - stage: integration tests
     #   script:
     #     - ./BuildTools/scripts/travis/integrationtest/wrapper.sh --cache "$BUILD_CACHE"

@@ -60,7 +60,7 @@ function setup_cache () {
 }
 
 function setup_copy_cache () {
-  COPY_CACHE="${CACHE_DIR}/../_copy_cache"
+  COPY_CACHE="${CACHE_DIR}/../.copy_cache"
   sudo rsync -a --delete "$CACHE_DIR"/ "$COPY_CACHE"
   WORKING_DIR="$COPY_CACHE"
 }
