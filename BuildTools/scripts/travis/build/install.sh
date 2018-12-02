@@ -13,4 +13,7 @@ function build_install () {
 }
 
 parse_options $@
+travis_mark_begin "PREPARING FOR BUILD"
 build_install
+travis_mark_end "PREPARING FOR BUILD"
+
