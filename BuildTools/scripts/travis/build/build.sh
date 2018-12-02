@@ -1,15 +1,24 @@
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 . "${SCRIPT_DIR}/../shared.sh"
 
-
 function build () {
-    echo "travis_fold:start:build_duplicati"
-    echo "+ START BUILDING BINARIES"
-    eval msbuild /p:Configuration=Release "${DUPLICATI_ROOT}"/Duplicati.sln $IF_QUIET_SUPPRESS_OUTPUT
+    # build version stamper
+	msbuild /property:Configuration=Release "${DUPLICATI_ROOT}/BuildTools/UpdateVersionStamp/UpdateVersionStamp.csproj"
+	mono "${DUPLICATI_ROOT}/BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="${RELEASE_VERSION}"
+
+	# build autoupdate
+	nuget restore "${DUPLICATI_ROOT}/BuildTools/AutoUpdateBuilder/AutoUpdateBuilder.sln"
+	nuget restore "${DUPLICATI_ROOT}/Duplicati.sln"
+	msbuild /p:Configuration=Release "${DUPLICATI_ROOT}/BuildTools/AutoUpdateBuilder/AutoUpdateBuilder.sln"
+
+	msbuild /p:DefineConstants=__MonoCS__ /p:DefineConstants=ENABLE_GTK /p:Configuration=Release "${DUPLICATI_ROOT}/Duplicati.sln"
+
+    msbuild /p:Configuration=Release "${DUPLICATI_ROOT}"/Duplicati.sln
     cp -r "${DUPLICATI_ROOT}"/Duplicati/Server/webroot "${DUPLICATI_ROOT}"/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/webroot
-    echo "travis_fold:end:build_duplicati"
-    echo "+ DONE BUILDING BINARIES"
 }
 
 parse_options "$@"
-build
+
+travis_mark_begin "BUILDING BINARIES"
+eval build $IF_QUIET_SUPPRESS_OUTPUT
+travis_mark_end "BUILDING BINARIES"
