@@ -183,6 +183,5 @@ echo "+ posting to forum" && post_to_forum
 
 echo "+ updating changelog" && update_changelog
 echo "+ updating git repo" && update_git_repo
-echo "+ removing temp changelog" && remove_changelog_tmp
 
 
