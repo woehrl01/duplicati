@@ -1,38 +1,21 @@
 #!/bin/bash
 
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
-DUPLICATI_ROOT="${SCRIPT_DIR}/../../"
+. "${SCRIPT_DIR}/../shared.sh"
+
 AUTHENTICODE_PFXFILE="${HOME}/.config/signkeys/Duplicati/authenticode.pfx"
 AUTHENTICODE_PASSWORD="${HOME}/.config/signkeys/Duplicati/authenticode.key"
 GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
 GPG=/usr/local/bin/gpg2
 # Newer GPG needs this to allow input from a non-terminal
 export GPG_TTY=$(tty)
-MONO=`which mono || /Library/Frameworks/Mono.framework/Commands/mono`
-
-function reset_version () {
-	"${MONO}" "${DUPLICATI_ROOT}/BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="2.0.0.7"
-}
-
-function quit_on_error() {
-  local parent_lineno="$1"
-  local message="$2"
-  local code="${3:-1}"
-  if [[ -n "$message" ]] ; then
-    echo "Error in $0 line ${parent_lineno}: ${message}; exiting with status ${code}"
-  else
-    echo "Error in $0 line ${parent_lineno}; exiting with status ${code}"
-  fi
-
-  eval reset_version $REDIRECT
-  exit "${code}"
-}
-
-set -eE
-trap 'quit_on_error $LINENO' ERR
 
 RELEASE_CHANGELOG_FILE="${DUPLICATI_ROOT}/changelog.txt"
 RELEASE_CHANGELOG_NEWS_FILE="${DUPLICATI_ROOT}/changelog-news.txt" # never in repo due to .gitignore
+RELEASE_TIMESTAMP=$(date +%Y-%m-%d)
+RELEASE_NAME="${RELEASE_VERSION}_${RELEASE_TYPE}_${RELEASE_TIMESTAMP}"
+RELEASE_FILE_NAME="duplicati-${RELEASE_NAME}"
+
 
 function update_version_files() {
 	echo "${RELEASE_NAME}" > "${DUPLICATI_ROOT}/Duplicati/License/VersionTag.txt"
@@ -40,12 +23,6 @@ function update_version_files() {
 	UPDATE_MANIFEST_URLS="https://updates.duplicati.com/${RELEASE_TYPE}/latest.manifest;https://alt.updates.duplicati.com/${RELEASE_TYPE}/latest.manifest"
 	echo "${UPDATE_MANIFEST_URLS}" > "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateURL.txt"
 	cp "${DUPLICATI_ROOT}/Updates/release_key.txt"  "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateSignKey.txt"
-}
-
-function reset_version_files() {
-	git checkout "${DUPLICATI_ROOT}/Duplicati/License/VersionTag.txt"
-	git checkout "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateBuildChannel.txt"
-	git checkout "${DUPLICATI_ROOT}/Duplicati/Library/AutoUpdater/AutoUpdateURL.txt"
 }
 
 function update_changelog () {
@@ -70,14 +47,6 @@ function update_changelog () {
 	if [ "x${RELEASE_CHANGEINFO}" == "x" ]; then
 		echo "  Warning: No information in changelog file"
 	fi
-}
-
-function remove_changelog_tmp () {
-    rm -rf $RELEASE_CHANGELOG_NEWS_FILE
-}
-
-function reset_changelog () {
-    git checkout "${RELEASE_CHANGELOG_FILE}"
 }
 
 function get_keyfile_password () {

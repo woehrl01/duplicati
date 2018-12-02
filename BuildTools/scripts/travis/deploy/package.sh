@@ -1,10 +1,11 @@
 
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
-. "${SCRIPT_DIR}/common.sh"
+. "${SCRIPT_DIR}/utils.sh"
 
 function sign_binaries_with_authenticode  () {
 	if [ $SIGNED != true ]
 	then
+		echo "  signing disabled, skipping"
 		return
 	fi
 
@@ -35,7 +36,6 @@ function generate_package () {
 	UPDATE_TARGET="${DUPLICATI_ROOT}/Updates/build/${RELEASE_TYPE}_target-${RELEASE_VERSION}"
 	UPDATE_ZIP_URLS="https://updates.duplicati.com/${RELEASE_TYPE}/${RELEASE_FILE_NAME}.zip;https://alt.updates.duplicati.com/${RELEASE_TYPE}/${RELEASE_FILE_NAME}.zip"
 
-	if [ -e "${UPDATE_TARGET}" ]; then rm -rf "${UPDATE_TARGET}"; fi
 	mkdir -p "${UPDATE_TARGET}"
 
 	auto_update_options="--input=\"${UPDATE_SOURCE}\" --output=\"${UPDATE_TARGET}\"  \
@@ -44,11 +44,8 @@ function generate_package () {
 
 	set_gpg_autoupdate_options
 
-	# Remove any extra misc files before packing (like on mac)
-	find "${DUPLICATI_ROOT}" -type f -name ".DS_Store" | xargs rm -rf && find  . -type f -name "Thumbs.db" | xargs rm -rf
-
 	# if zip is not written, non-zero return code will cause script to stop
-	"${MONO}" "${DUPLICATI_ROOT}/BuildTools/AutoUpdateBuilder/bin/Release/AutoUpdateBuilder.exe" $auto_update_options
+	mono "${DUPLICATI_ROOT}/BuildTools/AutoUpdateBuilder/bin/Release/AutoUpdateBuilder.exe" $auto_update_options
 
 	mv "${UPDATE_TARGET}/package.zip" "${UPDATE_TARGET}/latest.zip"
 	mv "${UPDATE_TARGET}/autoupdate.manifest" "${UPDATE_TARGET}/latest.manifest"
@@ -66,7 +63,6 @@ function generate_package () {
 
 function prepare_update_source_folder () {
 	UPDATE_SOURCE="${DUPLICATI_ROOT}/Updates/build/${RELEASE_TYPE}_source-${RELEASE_VERSION}"
-	rm -rf "${UPDATE_SOURCE}"
 	mkdir -p "${UPDATE_SOURCE}"
 
 	cp -R "${DUPLICATI_ROOT}/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/"* "${UPDATE_SOURCE}"
@@ -86,7 +82,7 @@ function prepare_update_source_folder () {
 	done
 
 	# Install the assembly redirects for all Duplicati .exe files
-	find "${UPDATE_SOURCE}" -maxdepth 1 -type f -name Duplicati.*.exe -exec cp ${SCRIPT_DIR}/../Installer/AssemblyRedirects.xml {}.config \;
+	find "${UPDATE_SOURCE}" -maxdepth 1 -type f -name Duplicati.*.exe -exec cp ${DUPLICATI_ROOT}/BuildTools/Installer/AssemblyRedirects.xml {}.config \;
 
 	# Clean some unwanted build files
 	for FILE in "control_dir" "Duplicati-server.sqlite" "Duplicati.debug.log" "updates"; do
@@ -102,63 +98,8 @@ function prepare_update_source_folder () {
 	rm -rf "${UPDATE_SOURCE}/"*.mdb "${UPDATE_SOURCE}/"*.pdb "${UPDATE_SOURCE}/"*.xml
 }
 
-function clean_and_build () {
-	XBUILD=`which msbuild || /Library/Frameworks/Mono.framework/Commands/msbuild`
-	NUGET=`which nuget || /Library/Frameworks/Mono.framework/Commands/nuget`
 
-	"${XBUILD}" /property:Configuration=Release "${DUPLICATI_ROOT}/BuildTools/UpdateVersionStamp/UpdateVersionStamp.csproj"
-	"${MONO}" "${DUPLICATI_ROOT}/BuildTools/UpdateVersionStamp/bin/Release/UpdateVersionStamp.exe" --version="${RELEASE_VERSION}"
-
-	# build autoupdate
-	"${NUGET}" restore "${DUPLICATI_ROOT}/BuildTools/AutoUpdateBuilder/AutoUpdateBuilder.sln"
-	"${NUGET}" restore "${DUPLICATI_ROOT}/Duplicati.sln"
-	"${XBUILD}" /p:Configuration=Release "${DUPLICATI_ROOT}/BuildTools/AutoUpdateBuilder/AutoUpdateBuilder.sln"
-
-	# clean
-	find "${DUPLICATI_ROOT}/Duplicati" -type d -name "Release" | xargs rm -rf
-	"${XBUILD}" /p:Configuration=Release /target:Clean "${DUPLICATI_ROOT}/Duplicati.sln"
-
-	"${XBUILD}" /p:DefineConstants=__MonoCS__ /p:DefineConstants=ENABLE_GTK /p:Configuration=Release "${DUPLICATI_ROOT}/Duplicati.sln"
-}
-
-SIGNED=true
-
-while true ; do
-    case "$1" in
-	--quiet)
-        IF_QUIET_SUPPRESS_OUTPUT=" > /dev/null"
-  		;;
-	--unsigned)
-		SIGNED=false
-		;;
-	--version)
-		RELEASE_VERSION="$2"
-		shift
-		;;
-    --* | -* )
-        echo "unknown option $1, please use --help."
-        exit 1
-        ;;
-    * )
-		if [ "x$1" == "x" ]; then
-			RELEASE_TYPE="canary"
-			break
-		else
-			RELEASE_TYPE=$1
-		fi
-        ;;
-    esac
-    shift
-done
-
-if [[ "$RELEASE_VERSION" == "" ]]; then
-	echo 'no version specified, exiting'
-	exit 1
-fi
-
-RELEASE_TIMESTAMP=$(date +%Y-%m-%d)
-RELEASE_NAME="${RELEASE_VERSION}_${RELEASE_TYPE}_${RELEASE_TIMESTAMP}"
-RELEASE_FILE_NAME="duplicati-${RELEASE_NAME}"
+parse_options "$@"
 
 echo
 echo "Building package ${RELEASE_FILE_NAME}"
@@ -167,19 +108,11 @@ echo "+ updating changelog" && update_changelog
 
 echo "+ updating versions in files" && update_version_files
 
-echo "+ compiling binaries" && eval clean_and_build $IF_QUIET_SUPPRESS_OUTPUT
-
 echo "+ copying binaries for packaging" && prepare_update_source_folder
 
 echo "+ signing binaries with authenticode" && sign_binaries_with_authenticode
 
 echo "+ generating package zipfile" && eval generate_package $IF_QUIET_SUPPRESS_OUTPUT
-
-echo "+ resetting update version stamp" && eval reset_version $IF_QUIET_SUPPRESS_OUTPUT
-
-echo "+ resetting changelog (will be committed after deploy)" && reset_changelog
-
-echo "+ resetting version files (will be commited after deploy)" && reset_version_files
 
 echo
 echo "= Built succesfully package delivered in: ${UPDATE_TARGET}"
