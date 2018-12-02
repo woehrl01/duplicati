@@ -1,3 +1,7 @@
+
+# duplicati root is relative to the stage dirs
+DUPLICATI_ROOT="$( cd "$(dirname "$0")" ; pwd -P )/../../../../"
+
 function quit_on_error() {
   local parent_lineno="$1"
   local message="$2"
@@ -13,10 +17,19 @@ function quit_on_error() {
 set -eE
 trap 'quit_on_error $LINENO' ERR
 
+function travis_mark_begin () {
+    echo "travis_fold:start:$1"
+    echo "+ START $1"
+}
+
+function travis_mark_end () {
+    echo "travis_fold:end:$1"
+    echo "+ DONE $1"
+}
+
 function load_mono () {
     echo "travis_fold:start:pull_mono"
     image="$CACHE_DIR/mono.tar"
-    ls -al "$CACHE_DIR"
     if [[ -f "$image" ]] && $CACHE_MONO; then
       echo "loading previously cached docker image"
       docker load <  "$image"
@@ -34,21 +47,15 @@ function test_in_docker() {
 }
 
 function deploy_in_docker() {
-    mono_docker "./BuildTools/scripts/travis/deploy/install.sh;./BuildTools/scripts/release.sh $FORWARD_OPTS"
+    mono_docker "./BuildTools/scripts/travis/deploy/install.sh;./BuildTools/scripts/travis/deploy/package.sh $FORWARD_OPTS"
 }
 
 function build_in_docker () {
-    mono_docker "./BuildTools/scripts/travis/build/install.sh $FORWARD_OPTS"
-    mono_docker "./BuildTools/scripts/travis/build/build.sh $FORWARD_OPTS"
-}
-
-function clean_cache () {
-  sudo rsync -a --delete "$REPO_DIR" "$CACHE_DIR"
-  rm -rf "$CACHE_DIR"/mono.tar
+    mono_docker "./BuildTools/scripts/travis/build/install.sh $FORWARD_OPTS;./BuildTools/scripts/travis/build/build.sh $FORWARD_OPTS"
 }
 
 function setup_cache () {
-  sudo rsync -a "$REPO_DIR"/ "$CACHE_DIR"
+  sudo rsync -a --delete "$REPO_DIR"/ "$CACHE_DIR"
   WORKING_DIR="$CACHE_DIR"
 }
 
@@ -70,6 +77,10 @@ function parse_options () {
   QUIET=false
   FORWARD_OPTS=""
   CACHE_MONO=false
+  RELEASE_VERSION="2.0.4.$(cat "$DUPLICATI_ROOT"/Updates/build_version.txt)"
+  RELEASE_TYPE="canary"
+  SIGNED=false
+
   while true ; do
       case "$1" in
       --cache_mono)
@@ -81,6 +92,17 @@ function parse_options () {
         ;;
       --cache)
         CACHE_DIR=$2
+        shift
+        ;;
+      --unsigned)
+        SIGNED=false
+        ;;
+      --version)
+        RELEASE_VERSION="$2"
+        shift
+        ;;
+      --releasetype)
+        RELEASE_TYPE="$2"
         shift
         ;;
     	--quiet)
@@ -105,7 +127,5 @@ function parse_options () {
       esac
       shift
   done
-}
 
-# duplicati root is relative to the stage dirs
-DUPLICATI_ROOT="$( cd "$(dirname "$0")" ; pwd -P )/../../../../"
+}
