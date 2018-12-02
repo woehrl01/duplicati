@@ -10,12 +10,6 @@ GPG=/usr/local/bin/gpg2
 # Newer GPG needs this to allow input from a non-terminal
 export GPG_TTY=$(tty)
 
-RELEASE_CHANGELOG_FILE="${DUPLICATI_ROOT}/changelog.txt"
-RELEASE_CHANGELOG_NEWS_FILE="${DUPLICATI_ROOT}/changelog-news.txt" # never in repo due to .gitignore
-RELEASE_TIMESTAMP=$(date +%Y-%m-%d)
-RELEASE_NAME="${RELEASE_VERSION}_${RELEASE_TYPE}_${RELEASE_TIMESTAMP}"
-RELEASE_FILE_NAME="duplicati-${RELEASE_NAME}"
-
 
 function update_version_files() {
 	echo "${RELEASE_NAME}" > "${DUPLICATI_ROOT}/Duplicati/License/VersionTag.txt"
