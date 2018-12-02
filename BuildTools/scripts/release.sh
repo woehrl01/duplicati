@@ -12,13 +12,6 @@ function update_git_repo () {
 	git push --tags
 }
 
-
-RELEASE_INC_VERSION=$(cat "$DUPLICATI_ROOT"/Updates/build_version.txt)
-RELEASE_INC_VERSION=$((RELEASE_INC_VERSION+1))
-RELEASE_VERSION="2.0.4.${RELEASE_INC_VERSION}"
-
-"${SCRIPT_DIR}/build-package.sh" --unsigned
-
 exit
 echo
 echo "2. Building installers"
