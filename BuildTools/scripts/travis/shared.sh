@@ -47,7 +47,9 @@ function test_in_docker() {
 }
 
 function deploy_in_docker() {
-    mono_docker "./BuildTools/scripts/travis/deploy/install.sh;./BuildTools/scripts/travis/deploy/package.sh $FORWARD_OPTS"
+    mono_docker "./BuildTools/scripts/travis/deploy/install.sh;\
+    ./BuildTools/scripts/travis/deploy/package.sh $FORWARD_OPTS;\
+    ./BuildTools/scripts/travis/deploy/installers.sh $FORWARD_OPTS"
 }
 
 function build_in_docker () {
@@ -80,6 +82,7 @@ function parse_options () {
   RELEASE_VERSION="2.0.4.$(cat "$DUPLICATI_ROOT"/Updates/build_version.txt)"
   RELEASE_TYPE="canary"
   SIGNED=false
+  INSTALLERS="debian,fedora,osx,synology,docker,windows"
 
   while true ; do
       case "$1" in
@@ -116,6 +119,10 @@ function parse_options () {
       --categories)
         TEST_CATEGORIES=$2
         shift
+        ;;
+      --installers)
+	    	INSTALLERS="$2"
+		    shift
         ;;
       --* | -* )
         echo "unknown option $1, please use --help."

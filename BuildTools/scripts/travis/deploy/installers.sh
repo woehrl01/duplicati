@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
-. "${SCRIPT_DIR}/common.sh"
+. "${SCRIPT_DIR}/utils.sh"
 
 function build_installer_debian () {
 	check_docker
@@ -190,53 +190,13 @@ function check_docker () {
 	fi
 }
 
-UNSIGNED=false
-LOCAL=false
+parse_options "$@"
+
 INSTALLERS="debian,fedora,osx,synology,docker,windows"
-
-while true ; do
-    case "$1" in
-    --installers)
-		INSTALLERS="$2"
-		shift
-        ;;
-    --help)
-        show_help
-        exit 0
-        ;;
-	--local)
-		LOCAL=true
-		;;
-	--unsigned)
-		UNSIGNED=true
-		;;
-	--target-dir)
-		UPDATE_TARGET=$2
-		shift
-		;;
-    --* | -* )
-        echo "unknown option $1, please use --help."
-        exit 1
-        ;;
-    * )
-		ZIPFILE=$1
-		if [ ! -f "$ZIPFILE" ]
-		then
-			echo "Please supply the path to an existing zip binary as the first argument"
-			exit 1
-		fi
-		break
-        ;;
-    esac
-    shift
-done
-
-RELEASE_FILE_NAME=$(basename "$ZIPFILE" .zip)
-VERSION=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 1)
+UPDATE_TARGET="${DUPLICATI_ROOT}/Updates/build/${RELEASE_TYPE}_target-${RELEASE_VERSION}"
 BUILDTYPE=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 2)
 BUILDTAG_RAW=$(echo "${RELEASE_FILE_NAME}" | cut -d "." -f 1-4 | cut -d "-" -f 2-4)
 BUILDTAG="${BUILDTAG_RAW//-}"
-MONO=`which mono || /Library/Frameworks/Mono.framework/Commands/mono`
 
 echo "Building installers for: $INSTALLERS"
 echo "Filename: ${ZIPFILE}"
@@ -277,5 +237,3 @@ if [ !$UNSIGNED ]; then
 	sign_with_authenticode "${UPDATE_TARGET}/${MSI64NAME}"
 	sign_with_authenticode "${UPDATE_TARGET}/${MSI32NAME}"
 fi
-
-#UPDATE_TARGET="Updates/build/${BUILDTYPE}_target-${VERSION}"

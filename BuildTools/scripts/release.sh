@@ -12,12 +12,6 @@ function update_git_repo () {
 	git push --tags
 }
 
-exit
-echo
-echo "2. Building installers"
-echo
-mkdir -p "${UPDATE_TARGET}/Installers"
-bash "build-installers.sh" --target-dir "${UPDATE_TARGET}/Installers" "${UPDATE_TARGET}/${RELEASE_FILE_NAME}.zip"
 
 echo
 echo "3. Deploying"
