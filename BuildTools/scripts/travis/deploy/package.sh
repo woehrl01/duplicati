@@ -33,7 +33,6 @@ function set_gpg_autoupdate_options () {
 }
 
 function generate_package () {
-	UPDATE_TARGET="${DUPLICATI_ROOT}/Updates/build/${RELEASE_TYPE}_target-${RELEASE_VERSION}"
 	UPDATE_ZIP_URLS="https://updates.duplicati.com/${RELEASE_TYPE}/${RELEASE_FILE_NAME}.zip;https://alt.updates.duplicati.com/${RELEASE_TYPE}/${RELEASE_FILE_NAME}.zip"
 
 	mkdir -p "${UPDATE_TARGET}"
@@ -62,7 +61,6 @@ function generate_package () {
 }
 
 function prepare_update_source_folder () {
-	UPDATE_SOURCE="${DUPLICATI_ROOT}/Updates/build/${RELEASE_TYPE}_source-${RELEASE_VERSION}"
 	mkdir -p "${UPDATE_SOURCE}"
 
 	cp -R "${DUPLICATI_ROOT}/Duplicati/GUI/Duplicati.GUI.TrayIcon/bin/Release/"* "${UPDATE_SOURCE}"

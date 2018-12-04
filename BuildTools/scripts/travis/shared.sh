@@ -72,7 +72,7 @@ function restore_build_to_cache () {
 }
 
 function mono_docker () {
-  docker run -v "${WORKING_DIR}:/duplicati" mono /bin/bash -c "cd /duplicati;$1"
+  docker run -v /var/run/docker.sock:/var/run/docker.sock -v "${WORKING_DIR}:/duplicati" mono /bin/bash -c "cd /duplicati;$1"
 }
 
 function parse_options () {
@@ -140,4 +140,6 @@ function parse_options () {
   RELEASE_TIMESTAMP=$(date +%Y-%m-%d)
   RELEASE_NAME="${RELEASE_VERSION}_${RELEASE_TYPE}_${RELEASE_TIMESTAMP}"
   RELEASE_FILE_NAME="duplicati-${RELEASE_NAME}"
+	UPDATE_SOURCE="${DUPLICATI_ROOT}/Updates/build/${RELEASE_TYPE}_source-${RELEASE_VERSION}"
+  UPDATE_TARGET="${DUPLICATI_ROOT}/Updates/build/${RELEASE_TYPE}_target-${RELEASE_VERSION}"
 }

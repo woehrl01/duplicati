@@ -4,32 +4,26 @@ SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 . "${SCRIPT_DIR}/utils.sh"
 
 function build_installer_debian () {
-	check_docker
 	DEBNAME="duplicati_${VERSION}-1_all.deb"
 	echo "DEBName: ${DEBNAME}"
 
-	echo ""
-	echo ""
-	echo "Building Debian deb with Docker ..."
+	echo "Building Debian deb"
 
-	bash "${SCRIPT_DIR}/../Installer/debian/docker-build-binary.sh" "${ZIPFILE}"
+	"${SCRIPT_DIR}/installers-debian.sh" "${ZIPFILE}"
 
-	mv "${SCRIPT_DIR}/../Installer/debian/${DEBNAME}" "${UPDATE_TARGET}"
+	mv "${DUPLICATI_ROOT}/BuildTools/Installer/debian/${DEBNAME}" "${UPDATE_TARGET}"
 
 	echo "Done building deb package"
 }
 
 function build_installer_fedora () {
-	check_docker
 	RPMNAME="duplicati-${VERSION}-${BUILDTAG}.noarch.rpm"
 	echo "RPMName: ${RPMNAME}"
-	echo ""
-	echo ""
-	echo "Building Fedora RPM with Docker ..."
+	echo "Building Fedora RPM"
 
-	bash "${SCRIPT_DIR}/../Installer/fedora/docker-build-binary.sh" "${ZIPFILE}"
+	"${DUPLICATI_ROOT}/BuildTools/Installer/fedora/docker-build-binary.sh" "${ZIPFILE}"
 
-	mv "${SCRIPT_DIR}/../Installer/fedora/${RPMNAME}" "${UPDATE_TARGET}"
+	mv "${DUPLICATI_ROOT}/BuildTools/Installer/fedora/${RPMNAME}" "${UPDATE_TARGET}"
 
 	echo "Done building rpm package"
 }
@@ -38,12 +32,10 @@ function build_installer_fedora () {
 function build_installer_synology () {
 	SPKNAME="duplicati-${BUILDTAG_RAW}.spk"
 	echo "SPKName: ${SPKNAME}"
-	echo ""
-	echo ""
 	echo "Building Synology package ..."
 
-	bash "${SCRIPT_DIR}/../Installer/Synology/make-binary-package.sh" "${ZIPFILE}"
-	mv "${SCRIPT_DIR}/../Installer/Synology/${SPKNAME}" "${UPDATE_TARGET}"
+	"${DUPLICATI_ROOT}/BuildTools/Installer/Synology/make-binary-package.sh" "${ZIPFILE}"
+	mv "${DUPLICATI_ROOT}/BuildTools/Installer/Synology/${SPKNAME}" "${UPDATE_TARGET}"
 	echo "Done building synology package"
 }
 
@@ -52,14 +44,12 @@ function build_installer_osx () {
 	DMGNAME="duplicati-${BUILDTAG_RAW}.dmg"
 	PKGNAME="duplicati-${BUILDTAG_RAW}.pkg"
 
-	echo ""
-	echo ""
 	echo "Building OSX package locally ..."
 	echo ""
 
-	bash "${SCRIPT_DIR}/../Installer/OSX/make-dmg.sh" "${ZIPFILE}"
-	mv "${SCRIPT_DIR}/../Installer/OSX/Duplicati.dmg" "../../${UPDATE_TARGET}/${DMGNAME}"
-	mv "${SCRIPT_DIR}/../Installer/OSX/Duplicati.pkg" "../../${UPDATE_TARGET}/${PKGNAME}"
+	"${DUPLICATI_ROOT}/BuildTools/Installer/OSX/make-dmg.sh" "${ZIPFILE}"
+	mv "${DUPLICATI_ROOT}/BuildTools/Installer/OSX/Duplicati.dmg" "../../${UPDATE_TARGET}/${DMGNAME}"
+	mv "${DUPLICATI_ROOT}/BuildTools/Installer/OSX/Duplicati.pkg" "../../${UPDATE_TARGET}/${PKGNAME}"
 	echo "Done building osx package"
 }
 
@@ -68,52 +58,50 @@ function build_installer_docker () {
 	echo ""
 	echo "Building Docker images ..."
 
-	bash "${SCRIPT_DIR}/../Installer/Docker/build-images.sh" "${ZIPFILE}"
+	"${DUPLICATI_ROOT}/BuildTools/Installer/Docker/build-images.sh" "${ZIPFILE}"
 
 	echo "Done building Docker images"
 }
 
+# function build_windows_installer () {
+# 	# Pre-boot virtual machine
+# 	echo "Booting Win10 build instance"
+# 	VBoxHeadless --startvm Duplicati-Win10-Build &
 
+# 	echo ""
+# 	echo ""
+# 	echo "Building Windows instance in virtual machine"
 
-function build_windows_installer () {
-	# Pre-boot virtual machine
-	echo "Booting Win10 build instance"
-	VBoxHeadless --startvm Duplicati-Win10-Build &
+# 	while true
+# 	do
+# 		ssh -o ConnectTimeout=5 IEUser@192.168.56.101 "dir"
+# 		if [ $? -eq 255 ]; then
+# 			echo "Windows Build machine is not responding, try restarting it"
+# 			read -p "Press [Enter] key to try again"
+# 			continue
+# 		fi
+# 		break
+# 	done
 
-	echo ""
-	echo ""
-	echo "Building Windows instance in virtual machine"
+# 	MSI64NAME="duplicati-${BUILDTAG_RAW}-x64.msi"
+# 	MSI32NAME="duplicati-${BUILDTAG_RAW}-x86.msi"
 
-	while true
-	do
-		ssh -o ConnectTimeout=5 IEUser@192.168.56.101 "dir"
-		if [ $? -eq 255 ]; then
-			echo "Windows Build machine is not responding, try restarting it"
-			read -p "Press [Enter] key to try again"
-			continue
-		fi
-		break
-	done
+# cat > "tmp-windows-commands.bat" <<EOF
+# SET VS120COMNTOOLS=%VS140COMNTOOLS%
+# cd \\Duplicati\\Installer\\Windows
+# build-msi.bat "../../$1"
+# EOF
 
-	MSI64NAME="duplicati-${BUILDTAG_RAW}-x64.msi"
-	MSI32NAME="duplicati-${BUILDTAG_RAW}-x86.msi"
+# 	ssh IEUser@192.168.56.101 "\\Duplicati\\tmp-windows-commands.bat"
+# 	ssh IEUser@192.168.56.101 "shutdown /s /t 0"
 
-cat > "tmp-windows-commands.bat" <<EOF
-SET VS120COMNTOOLS=%VS140COMNTOOLS%
-cd \\Duplicati\\Installer\\Windows
-build-msi.bat "../../$1"
-EOF
+# 	rm "tmp-windows-commands.bat"
 
-	ssh IEUser@192.168.56.101 "\\Duplicati\\tmp-windows-commands.bat"
-	ssh IEUser@192.168.56.101 "shutdown /s /t 0"
+# 	mv "./Installer/Windows/Duplicati.msi" "${UPDATE_TARGET}/${MSI64NAME}"
+# 	mv "./Installer/Windows/Duplicati-32bit.msi" "${UPDATE_TARGET}/${MSI32NAME}"
 
-	rm "tmp-windows-commands.bat"
-
-	mv "./Installer/Windows/Duplicati.msi" "${UPDATE_TARGET}/${MSI64NAME}"
-	mv "./Installer/Windows/Duplicati-32bit.msi" "${UPDATE_TARGET}/${MSI32NAME}"
-
-	VBoxManage controlvm "Duplicati-Win10-Build" poweroff
-}
+# 	VBoxManage controlvm "Duplicati-Win10-Build" poweroff
+# }
 
 
 function build_file_signatures() {
@@ -156,7 +144,7 @@ function set_gpg_data () {
 			echo
 		fi
 
-		GPGDATA=$("${MONO}" "BuildTools/AutoUpdateBuilder/bin/Debug/SharpAESCrypt.exe" d "${KEYFILE_PASSWORD}" "${GPG_KEYFILE}")
+		GPGDATA=$(mono "BuildTools/AutoUpdateBuilder/bin/Debug/SharpAESCrypt.exe" d "${KEYFILE_PASSWORD}" "${GPG_KEYFILE}")
 		if [ ! $? -eq 0 ]; then
 			echo "Decrypting GPG keyfile failed"
 			exit 1
@@ -169,34 +157,13 @@ function set_gpg_data () {
 	fi
 }
 
-function check_docker () {
-	retries=10
-	while [[ $retries -ge 1 ]]
-	do
-		DOCKER_RESULT=$(docker ps)
-		if [ "$?" != "0" ]
-		then
-			echo "It appears the Docker daemon is not running, make sure you started it ($retries tries left)"
-		else
-			break
-		fi
-		retries=$(($retries - 1))
-		sleep 1
-	done
-
-	if [ $retries -eq 0 ]
-	then
-		exit 1
-	fi
-}
-
 parse_options "$@"
 
-INSTALLERS="debian,fedora,osx,synology,docker,windows"
-UPDATE_TARGET="${DUPLICATI_ROOT}/Updates/build/${RELEASE_TYPE}_target-${RELEASE_VERSION}"
+
 BUILDTYPE=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 2)
 BUILDTAG_RAW=$(echo "${RELEASE_FILE_NAME}" | cut -d "." -f 1-4 | cut -d "-" -f 2-4)
 BUILDTAG="${BUILDTAG_RAW//-}"
+ZIPFILE="${UPDATE_TARGET}/${RELEASE_FILE_NAME}.zip"
 
 echo "Building installers for: $INSTALLERS"
 echo "Filename: ${ZIPFILE}"
