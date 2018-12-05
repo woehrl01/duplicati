@@ -13,8 +13,8 @@ function build_installer () {
 
     install_oem_files "${debian_installer_dir}/" "${debian_installer_dir}/${DIRNAME}"
 
-    cp -R "${debian_installer_dir}/debian/debian" "${debian_installer_dir}/${DIRNAME}"
-    cp "${debian_installer_dir}/debian/bin-rules.sh" "${debian_installer_dir}/${DIRNAME}/debian/rules"
+    cp -R "${debian_installer_dir}/debian" "${debian_installer_dir}/${DIRNAME}"
+    cp "${debian_installer_dir}/bin-rules.sh" "${debian_installer_dir}/${DIRNAME}/debian/rules"
     sed -e "s;%VERSION%;${RELEASE_VERSION};g" -e "s;%DATE%;$DATE_STAMP;g" "${debian_installer_dir}/debian/changelog" > "${DUPLICATI_ROOT}/BuildTools/Installer/debian/${DIRNAME}/debian/changelog"
 
     touch "${debian_installer_dir}/${DIRNAME}/releasenotes.txt"
@@ -24,7 +24,7 @@ function build_installer () {
     # Weirdness with time not being synced in Docker instance
     sleep 5
 
-    docker run --workdir "/builddir/${DIRNAME}" --volume ${WORKING_DIR}/BuildTools/Installer/debian/:/builddir:rw "duplicati/debian-build:latest" dpkg-buildpackage
+    docker run --workdir "/builddir/${DIRNAME}" --volume "${WORKING_DIR}/BuildTools/Installer/debian/":/builddir:rw "duplicati/debian-build:latest" dpkg-buildpackage
 
 	mv "${debian_installer_dir}/${DEBNAME}" "${UPDATE_TARGET}"
 }

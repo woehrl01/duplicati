@@ -8,17 +8,8 @@ function build_installer_debian () {
 }
 
 function build_installer_fedora () {
-	RPMNAME="duplicati-${VERSION}-${BUILDTAG}.noarch.rpm"
-	echo "RPMName: ${RPMNAME}"
-	echo "Building Fedora RPM"
-
-	"${DUPLICATI_ROOT}/BuildTools/Installer/fedora/docker-build-binary.sh" "${ZIPFILE}"
-
-	mv "${DUPLICATI_ROOT}/BuildTools/Installer/fedora/${RPMNAME}" "${UPDATE_TARGET}"
-
-	echo "Done building rpm package"
+	"${SCRIPT_DIR}/installers-fedora.sh"
 }
-
 
 function build_installer_synology () {
 	SPKNAME="duplicati-${BUILDTAG_RAW}.spk"
@@ -30,18 +21,8 @@ function build_installer_synology () {
 	echo "Done building synology package"
 }
 
-
 function build_installer_osx () {
-	DMGNAME="duplicati-${BUILDTAG_RAW}.dmg"
-	PKGNAME="duplicati-${BUILDTAG_RAW}.pkg"
-
-	echo "Building OSX package locally ..."
-	echo ""
-
-	"${DUPLICATI_ROOT}/BuildTools/Installer/OSX/make-dmg.sh" "${ZIPFILE}"
-	mv "${DUPLICATI_ROOT}/BuildTools/Installer/OSX/Duplicati.dmg" "../../${UPDATE_TARGET}/${DMGNAME}"
-	mv "${DUPLICATI_ROOT}/BuildTools/Installer/OSX/Duplicati.pkg" "../../${UPDATE_TARGET}/${PKGNAME}"
-	echo "Done building osx package"
+	"${SCRIPT_DIR}/installers-osx.sh"
 }
 
 function build_installer_docker () {
@@ -149,11 +130,6 @@ function set_gpg_data () {
 }
 
 parse_options "$@"
-
-
-BUILDTYPE=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 2)
-BUILDTAG_RAW=$(echo "${RELEASE_FILE_NAME}" | cut -d "." -f 1-4 | cut -d "-" -f 2-4)
-BUILDTAG="${BUILDTAG_RAW//-}"
 
 echo "Building installers for: $INSTALLERS"
 

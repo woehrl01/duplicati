@@ -184,3 +184,14 @@ fi
 
 
 echo "Done, created ${OUTPUT_DMG}"
+
+
+	DMGNAME="duplicati-${BUILDTAG_RAW}.dmg"
+	PKGNAME="duplicati-${BUILDTAG_RAW}.pkg"
+
+
+
+
+
+	mv "${DUPLICATI_ROOT}/BuildTools/Installer/OSX/Duplicati.dmg" "../../${UPDATE_TARGET}/${DMGNAME}"
+	mv "${DUPLICATI_ROOT}/BuildTools/Installer/OSX/Duplicati.pkg" "../../${UPDATE_TARGET}/${PKGNAME}"

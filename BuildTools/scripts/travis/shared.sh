@@ -82,7 +82,7 @@ function parse_options () {
   RELEASE_VERSION="2.0.4.$(cat "$DUPLICATI_ROOT"/Updates/build_version.txt)"
   RELEASE_TYPE="canary"
   SIGNED=false
-  INSTALLERS="debian,fedora,osx,synology,docker,windows"
+  INSTALLERS="debian,fedora,synology,docker" #osx,windows"
 
   while true ; do
       case "$1" in
