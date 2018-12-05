@@ -156,10 +156,6 @@ BUILDTAG_RAW=$(echo "${RELEASE_FILE_NAME}" | cut -d "." -f 1-4 | cut -d "-" -f 2
 BUILDTAG="${BUILDTAG_RAW//-}"
 
 echo "Building installers for: $INSTALLERS"
-echo "Filename: ${ZIPFILE}"
-echo "Version: ${VERSION}"
-echo "Buildtype: ${BUILDTYPE}"
-echo "Buildtag: ${BUILDTAG}"
 
 if [[ $INSTALLERS =~ "debian" ]]; then
 	build_installer_debian

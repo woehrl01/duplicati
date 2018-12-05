@@ -98,10 +98,7 @@ function prepare_update_source_folder () {
 
 
 parse_options "$@"
-
-echo
-echo "Building package ${RELEASE_FILE_NAME}"
-echo
+travis_mark_begin "Building package"
 echo "+ updating changelog" && update_changelog
 
 echo "+ updating versions in files" && update_version_files
@@ -114,4 +111,4 @@ echo "+ generating package zipfile" && eval generate_package $IF_QUIET_SUPPRESS_
 
 echo
 echo "= Built succesfully package delivered in: ${UPDATE_TARGET}"
-echo
+travis_mark_end "Building package"

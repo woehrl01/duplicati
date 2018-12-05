@@ -58,13 +58,13 @@ function build_in_docker () {
 
 function setup_cache () {
   sudo rsync -a --delete "$REPO_DIR"/ "$CACHE_DIR"
-  WORKING_DIR="$CACHE_DIR"
+  export WORKING_DIR=$(cd "$CACHE_DIR";pwd -P)
 }
 
 function setup_copy_cache () {
   COPY_CACHE="${CACHE_DIR}/../.copy_cache"
   sudo rsync -a --delete "$CACHE_DIR"/ "$COPY_CACHE"
-  WORKING_DIR="$COPY_CACHE"
+  export WORKING_DIR=$(cd "$COPY_CACHE";pwd -P)
 }
 
 function restore_build_to_cache () {
@@ -72,7 +72,7 @@ function restore_build_to_cache () {
 }
 
 function mono_docker () {
-  docker run -v /var/run/docker.sock:/var/run/docker.sock -v "${WORKING_DIR}:/duplicati" mono /bin/bash -c "cd /duplicati;$1"
+  docker run -e WORKING_DIR="$WORKING_DIR" -v /var/run/docker.sock:/var/run/docker.sock -v "${WORKING_DIR}:/duplicati" mono /bin/bash -c "cd /duplicati;$1"
 }
 
 function parse_options () {
