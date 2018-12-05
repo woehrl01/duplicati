@@ -4,16 +4,7 @@ SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 . "${SCRIPT_DIR}/utils.sh"
 
 function build_installer_debian () {
-	DEBNAME="duplicati_${VERSION}-1_all.deb"
-	echo "DEBName: ${DEBNAME}"
-
-	echo "Building Debian deb"
-
-	"${SCRIPT_DIR}/installers-debian.sh" "${ZIPFILE}"
-
-	mv "${DUPLICATI_ROOT}/BuildTools/Installer/debian/${DEBNAME}" "${UPDATE_TARGET}"
-
-	echo "Done building deb package"
+	"${SCRIPT_DIR}/installers-debian.sh"
 }
 
 function build_installer_fedora () {
@@ -163,7 +154,6 @@ parse_options "$@"
 BUILDTYPE=$(echo "${RELEASE_FILE_NAME}" | cut -d "-" -f 2 | cut -d "_" -f 2)
 BUILDTAG_RAW=$(echo "${RELEASE_FILE_NAME}" | cut -d "." -f 1-4 | cut -d "-" -f 2-4)
 BUILDTAG="${BUILDTAG_RAW//-}"
-ZIPFILE="${UPDATE_TARGET}/${RELEASE_FILE_NAME}.zip"
 
 echo "Building installers for: $INSTALLERS"
 echo "Filename: ${ZIPFILE}"
