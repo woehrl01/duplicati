@@ -24,7 +24,7 @@ function build_installer () {
     # Weirdness with time not being synced in Docker instance
     sleep 5
 
-    docker run --workdir "/builddir/${DIRNAME}" --volume "${WORKING_DIR}/BuildTools/Installer/debian/":/builddir:rw "duplicati/debian-build:latest" dpkg-buildpackage
+    docker run --rm --workdir "/builddir/${DIRNAME}" --volume "${WORKING_DIR}/BuildTools/Installer/debian/":/builddir:rw "duplicati/debian-build:latest" dpkg-buildpackage
 
 	mv "${debian_installer_dir}/${DEBNAME}" "${UPDATE_TARGET}"
 }

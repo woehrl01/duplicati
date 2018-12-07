@@ -72,7 +72,7 @@ function restore_build_to_cache () {
 }
 
 function mono_docker () {
-  docker run -e WORKING_DIR="$WORKING_DIR" -v /var/run/docker.sock:/var/run/docker.sock -v "${WORKING_DIR}:/duplicati" mono /bin/bash -c "cd /duplicati;$1"
+  docker run -e WORKING_DIR="$WORKING_DIR" -v /var/run/docker.sock:/var/run/docker.sock -v "${WORKING_DIR}:/duplicati" --rm mono /bin/bash -c "cd /duplicati;$1"
 }
 
 function parse_options () {
@@ -82,7 +82,7 @@ function parse_options () {
   RELEASE_VERSION="2.0.4.$(cat "$DUPLICATI_ROOT"/Updates/build_version.txt)"
   RELEASE_TYPE="canary"
   SIGNED=false
-  INSTALLERS="debian,fedora,synology,docker" #osx,windows"
+  INSTALLERS="fedora" #,debian,fedora,synology,docker" #osx,windows"
 
   while true ; do
       case "$1" in

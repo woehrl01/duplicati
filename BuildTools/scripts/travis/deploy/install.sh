@@ -6,7 +6,7 @@ SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 function install_docker () {
    apt-get update
    apt-get install -y \
-      apt-transport-https ca-certificates software-properties-common unzip
+      apt-transport-https ca-certificates software-properties-common unzip bzip2
    #    curl \
    #    gnupg2 \
 

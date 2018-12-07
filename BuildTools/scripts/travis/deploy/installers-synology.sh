@@ -1,49 +1,23 @@
 #!/bin/bash
-
-
-quit_on_error() {
-    echo "Error on line $1, stopping build of installer(s)."
-    exit 1
-}
-
-set -eE
-trap 'quit_on_error $LINENO' ERR
-
-
-
-ZIPFILE=$1
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
-FILENAME=$(basename $1)
-DIRNAME="${SCRIPT_DIR}"/$(echo "${FILENAME}" | cut -d "_" -f 1)
-VERSION=$(echo "${DIRNAME}" | cut -d "-" -f 2)
+. "${SCRIPT_DIR}/utils.sh"
+
+function build_installer () {
+    ZIPFILE="${UPDATE_TARGET}/${RELEASE_FILE_NAME}.zip"
+    DIRNAME=$(echo "${RELEASE_FILE_NAME}" | cut -d "_" -f 1)
 DATE_STAMP=$(LANG=C date -R)
-BASE_FILE_NAME="${FILENAME%.*}"
+BASE_FILE_NAME="${RELEASE_FILE_NAME%.*}"
 TMPDIRNAME="${SCRIPT_DIR}/${BASE_FILE_NAME}-extract"
-MONO=/Library/Frameworks/Mono.framework/Commands/mono
-GPG_KEYFILE="${HOME}/.config/signkeys/Duplicati/updater-gpgkey.key"
 
-if [ ! -f "$ZIPFILE" ]; then
-	echo "Please provide the filename of an existing zip build as the first argument"
-	exit
-fi
-
-
-rm -rf "${DIRNAME}"
-
-if [ -d "${TMPDIRNAME}" ]; then
-    rm -rf "${TMPDIRNAME}"
-fi
-
-rm -rf "${SCRIPT_DIR}/package.tgz"
-rm -rf "${SCRIPT_DIR}/${BASE_FILE_NAME}.spk"
-rm -rf "${SCRIPT_DIR}/${BASE_FILE_NAME}.spk.tmp"
-rm -rf "${SCRIPT_DIR}/${BASE_FILE_NAME}.spk.signature"
+# rm -rf "${SCRIPT_DIR}/package.tgz"
+# rm -rf "${SCRIPT_DIR}/${BASE_FILE_NAME}.spk"
+# rm -rf "${SCRIPT_DIR}/${BASE_FILE_NAME}.spk.tmp"
+# rm -rf "${SCRIPT_DIR}/${BASE_FILE_NAME}.spk.signature"
 
 TIMESERVER="http://timestamp.synology.com/timestamp.php"
 
 unzip -q -d "${DIRNAME}" "$ZIPFILE"
 
-. "${SCRIPT_DIR}/../../scripts/common.sh"
 install_oem_files "${SCRIPT_DIR}" "${DIRNAME}"
 
 # Remove items unused on the Synology platform
@@ -75,7 +49,7 @@ ICON_72=$(openssl base64 -A -in "${SCRIPT_DIR}"/PACKAGE_ICON.PNG)
 ICON_256=$(openssl base64 -A -in "${SCRIPT_DIR}"/PACKAGE_ICON_256.PNG)
 
 git checkout "${SCRIPT_DIR}"/INFO
-echo "version=\"${VERSION}\"" >> "${SCRIPT_DIR}/INFO"
+echo "version=\"${RELEASE_VERSION}\"" >> "${SCRIPT_DIR}/INFO"
 MD5=$(md5sum "${SCRIPT_DIR}/package.tgz" | awk -F ' ' '{print $NF}')
 echo "checksum=\"${MD5}\"" >> "${SCRIPT_DIR}/INFO"
 echo "extractsize=\"${DIRSIZE_KB}\"" >> "${SCRIPT_DIR}/INFO"
@@ -130,3 +104,12 @@ if [ "z${GPGID}" != "z" ]; then
 
     rm -rf "${TMPDIRNAME}"
 fi
+}
+
+
+parse_options "$@"
+
+travis_mark_begin "BUILDING SYNOLOGY PACKAGE"
+build_installer
+travis_mark_end "BUILDING SYNOLOGY PACKAGE"
+
