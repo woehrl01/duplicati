@@ -264,11 +264,14 @@ namespace Duplicati.Library.Main.Database
                     selectBlocklistBlocksetEntries +
                     @" UNION " +
                     selectBlocksetEntries;
-                    
+
                 var selectFiltered =
                     @"SELECT DISTINCT ""H"".""BlocksetID"", ""H"".""Index"", ""H"".""BlockID"" FROM (" +
                     selectAllBlocksetEntries +
-                    @") H WHERE (""H"".""BlocksetID"" || ':' || ""H"".""Index"") NOT IN (SELECT (""ExistingBlocksetEntries"".""BlocksetID"" || ':' || ""ExistingBlocksetEntries"".""Index"") FROM ""BlocksetEntry"" ""ExistingBlocksetEntries"" )";
+                    @") H LEFT JOIN ""BlocksetEntry"" ""ExistingBlocksetEntries"" on (""H"".""BlocksetID"" = ""ExistingBlocksetEntries"".""BlocksetID"" AND ""H"".""Index"" = ""ExistingBlocksetEntries"".""Index"")" +
+                    @" WHERE ""ExistingBlocksetEntries"".""BlocksetID"" IS NULL AND ""ExistingBlocksetEntries"".""Index"" IS NULL;";
+
+                    //@") H WHERE (""H"".""BlocksetID"" || ':' || ""H"".""Index"") NOT IN (SELECT (""ExistingBlocksetEntries"".""BlocksetID"" || ':' || ""ExistingBlocksetEntries"".""Index"") FROM ""BlocksetEntry"" ""ExistingBlocksetEntries"" )";
                 
                 var insertBlocksetEntriesCommand =
                     @"INSERT INTO ""BlocksetEntry"" (""BlocksetID"", ""Index"", ""BlockID"") " + selectFiltered;
